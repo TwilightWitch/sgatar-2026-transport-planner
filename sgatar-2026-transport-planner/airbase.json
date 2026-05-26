@@ -1,0 +1,5 @@
+{
+  "framework": "container",
+  "handle": "jw-iras/sgatar26transportplanner",
+  "port": 8080
+}
