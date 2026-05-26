@@ -1,0 +1,297 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SGATAR 2026 Transport Planner</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to main content</a>
+    <header role="banner">
+      <h1>SGATAR 2026 Transport Planner</h1>
+      <p>7-10 September 2026 &middot; Singapore</p>
+    </header>
+    <main id="main" role="main">
+      <nav aria-label="Planner sections">
+        <div role="tablist">
+          <button role="tab" id="t-s" aria-selected="true" aria-controls="p-s">
+            Schedule
+          </button>
+          <button role="tab" id="t-m" aria-selected="false" aria-controls="p-m">
+            Simulator
+          </button>
+          <button role="tab" id="t-c" aria-selected="false" aria-controls="p-c">
+            Custom
+          </button>
+        </div>
+      </nav>
+
+      <!-- SCHEDULE -->
+      <section
+        id="p-s"
+        role="tabpanel"
+        aria-labelledby="t-s"
+        aria-hidden="false"
+      >
+        <div class="card">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              flex-wrap: wrap;
+              gap: 0.5rem;
+              margin-bottom: 0.6rem;
+            "
+          >
+            <strong style="font-size: 0.9rem">Schedule Data</strong>
+            <div class="brow" style="margin: 0">
+              <button class="btn btn-o btn-sm" id="btn-dl" type="button">
+                &#8659; Export CSV
+              </button>
+              <button class="btn btn-o btn-sm" id="btn-rst" type="button">
+                &#8635; Reset Default
+              </button>
+            </div>
+          </div>
+          <div
+            class="drop"
+            id="drop-z"
+            aria-label="Drop CSV file here to upload"
+          >
+            <svg
+              aria-hidden="true"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="color: var(--c-pri)"
+            >
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+            <p>
+              Drop CSV here or
+              <button type="button" id="drop-browse" class="link-btn">
+                browse
+              </button>
+            </p>
+            <p style="font-size: 0.7rem">
+              Columns: Day, Service, ArrivalBy, BusId, From, To, Depart, Arrive,
+              PlannedPax, Capacity, Note, LO
+            </p>
+          </div>
+          <input
+            type="file"
+            id="csv-fi"
+            accept=".csv,text/csv"
+            aria-label="Upload schedule CSV"
+          />
+          <output id="up-st" aria-live="polite"></output>
+        </div>
+        <p class="edit-hint" role="note">
+          <svg
+            aria-hidden="true"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+            />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          Click any cell to edit times, locations or passenger counts. Use
+          <strong>+ Add Bus</strong> to add a row, <strong>&#215;</strong> to
+          remove.
+        </p>
+        <div id="sched-root"></div>
+      </section>
+
+      <!-- SIMULATOR -->
+      <section
+        id="p-m"
+        role="tabpanel"
+        aria-labelledby="t-m"
+        aria-hidden="true"
+      >
+        <!-- ── Single Simulation ── -->
+        <div class="card">
+          <h2
+            style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem"
+          >
+            Single Simulation
+          </h2>
+          <p class="note">
+            Select a service. Adjust guest count, buffer and variability to
+            stress-test capacity for the actual day.
+          </p>
+          <div class="fgrid">
+            <div class="fg">
+              <label for="ss-svc">Service</label
+              ><select id="ss-svc"></select>
+            </div>
+            <div class="fg">
+              <label for="ss-g">Total Guests</label
+              ><input type="number" id="ss-g" min="1" max="999" value="190" />
+            </div>
+            <div class="fg">
+              <label for="ss-buf">Buffer: <span id="ss-bv">15</span>%</label>
+              <input
+                type="range"
+                id="ss-buf"
+                min="0"
+                max="40"
+                value="15"
+                aria-label="Buffer percentage"
+              />
+              <div class="rrow"><span>0%</span><span>40%</span></div>
+            </div>
+            <div class="fg">
+              <label for="ss-var"
+                >Variability: <span id="ss-vv">20</span>%</label
+              >
+              <input
+                type="range"
+                id="ss-var"
+                min="0"
+                max="100"
+                value="20"
+                aria-label="Demand variability"
+              />
+              <div class="rrow"><span>Even</span><span>Very Uneven</span></div>
+            </div>
+          </div>
+          <div class="brow">
+            <button class="btn btn-p" id="ss-run" type="button">
+              Run Simulation
+            </button>
+            <button class="btn btn-o" id="ss-re" type="button">
+              Re-randomise
+            </button>
+          </div>
+        </div>
+
+        <!-- single-run output sits directly under its card -->
+        <div id="sim-out" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- ── Multiple Simulations ── -->
+        <div class="card">
+          <h2
+            style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem"
+          >
+            Multiple Simulations
+          </h2>
+          <p class="note" style="margin-bottom: 0.6rem">
+            Repeats the simulation many times with different random seeds to
+            estimate the <em>probability</em> of overloads and quantify the
+            benefit of adding or removing a bus. Uses the same service, guest
+            count, buffer and variability configured above.
+          </p>
+          <div class="fgrid" style="margin-bottom: 0.5rem">
+            <div class="fg">
+              <label for="ss-mc-n">Number of Runs</label>
+              <input
+                type="number"
+                id="ss-mc-n"
+                min="100"
+                max="50000"
+                value="1000"
+                step="100"
+              />
+            </div>
+          </div>
+          <div class="brow">
+            <button class="btn btn-p" id="ss-mc" type="button">
+              Run Simulations
+            </button>
+          </div>
+        </div>
+
+        <!-- Monte Carlo output sits directly under its card -->
+        <div id="mc-out" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <!-- CUSTOM -->
+      <section
+        id="p-c"
+        role="tabpanel"
+        aria-labelledby="t-c"
+        aria-hidden="true"
+      >
+        <div class="card">
+          <h2
+            style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem"
+          >
+            Custom Scenario
+          </h2>
+          <p class="note">
+            Build a bespoke fleet scenario and simulate load distribution.
+          </p>
+          <div class="fgrid">
+            <div class="fg">
+              <label for="cs-n">Scenario Name</label
+              ><input
+                type="text"
+                id="cs-n"
+                placeholder="e.g. Extra gala buses"
+              />
+            </div>
+            <div class="fg">
+              <label for="cs-b">Buffer %</label
+              ><input type="number" id="cs-b" min="0" max="50" value="15" />
+            </div>
+            <div class="fg">
+              <label for="cs-v">Variability %</label
+              ><input type="number" id="cs-v" min="0" max="100" value="20" />
+            </div>
+          </div>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 0.4rem;
+            "
+          >
+            <strong
+              style="
+                font-size: 0.78rem;
+                color: var(--c-mut);
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+              "
+              >Buses</strong
+            >
+            <button class="btn btn-o btn-sm" id="cs-add" type="button">
+              + Add Bus
+            </button>
+          </div>
+          <ul id="cs-list" aria-label="Custom buses"></ul>
+          <div class="brow" style="margin-top: 0.75rem">
+            <button class="btn btn-p" id="cs-run" type="button">
+              Run Simulation
+            </button>
+            <button class="btn btn-o" id="cs-clr" type="button">
+              Clear All
+            </button>
+          </div>
+        </div>
+        <div id="cust-out" aria-live="polite" aria-atomic="true"></div>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

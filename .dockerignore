@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+*.log
+.DS_Store
+.vscode
+docker-compose.yml
+README.md
+jsconfig.json
+.eslintrc.json

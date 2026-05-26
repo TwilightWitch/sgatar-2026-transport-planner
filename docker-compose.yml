@@ -1,0 +1,27 @@
+services:
+  transport-planner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sgatar-transport-planner:latest
+    container_name: sgatar-transport-planner
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    read_only: true
+    # nginx needs writable tmp dirs even in read-only mode.
+    # Long-form syntax allows setting mode=0777 so the non-root 'app' user
+    # (UID 999) can create subdirectories inside the tmpfs volumes.
+    volumes:
+      - type: tmpfs
+        target: /var/cache/nginx
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /var/run
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
