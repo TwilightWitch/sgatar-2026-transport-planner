@@ -91,10 +91,13 @@ export function syncCustom() {
         ?.value ?? "";
     return {
       id,
-      from: getVal(`cf${id}`) || bus.from,
-      to: getVal(`ct${id}`) || bus.to,
-      capacity: Number.parseInt(getVal(`cc${id}`), 10) || DEFAULT_CAPACITY,
-      plannedPax: Number.parseInt(getVal(`cp${id}`), 10) || 0,
+      from: getVal(`cf${id}`),
+      to: getVal(`ct${id}`),
+      capacity: Math.max(
+        Number.parseInt(getVal(`cc${id}`), 10) || DEFAULT_CAPACITY,
+        1,
+      ),
+      plannedPax: Math.max(Number.parseInt(getVal(`cp${id}`), 10) || 0, 0),
     };
   });
 }

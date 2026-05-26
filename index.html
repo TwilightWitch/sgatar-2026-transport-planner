@@ -15,13 +15,31 @@
     <main id="main" role="main">
       <nav aria-label="Planner sections">
         <div role="tablist">
-          <button role="tab" id="t-s" aria-selected="true" aria-controls="p-s">
+          <button
+            role="tab"
+            id="t-s"
+            aria-selected="true"
+            aria-controls="p-s"
+            tabindex="0"
+          >
             Schedule
           </button>
-          <button role="tab" id="t-m" aria-selected="false" aria-controls="p-m">
+          <button
+            role="tab"
+            id="t-m"
+            aria-selected="false"
+            aria-controls="p-m"
+            tabindex="-1"
+          >
             Simulator
           </button>
-          <button role="tab" id="t-c" aria-selected="false" aria-controls="p-c">
+          <button
+            role="tab"
+            id="t-c"
+            aria-selected="false"
+            aria-controls="p-c"
+            tabindex="-1"
+          >
             Custom
           </button>
         </div>
@@ -92,6 +110,7 @@
             id="csv-fi"
             accept=".csv,text/csv"
             aria-label="Upload schedule CSV"
+            hidden
           />
           <output id="up-st" aria-live="polite"></output>
         </div>

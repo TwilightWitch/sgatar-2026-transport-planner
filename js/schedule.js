@@ -300,7 +300,9 @@ function onScheduleClick(event) {
 function insertBus(addBtn) {
   const { addDay: day, addSvc: svc, addArr: arr } = addBtn.dataset;
   if (!day || !svc || !arr) return;
-  const existing = state.schedule.filter((r) => r.day === day && r.svc === svc);
+  const existing = state.schedule.filter(
+    (r) => r.day === day && r.svc === svc && r.arr === arr,
+  );
   const lastRow = existing.at(-1);
   const insertIdx = lastRow
     ? state.schedule.indexOf(lastRow) + 1

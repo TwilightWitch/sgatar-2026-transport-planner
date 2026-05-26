@@ -91,6 +91,7 @@ export function runMonteCarlo(buses, totalG, bufPct, varPct, n) {
  */
 export function mcFleetDelta(buses, totalG, bufPct, varPct, n, delta) {
   if (delta < 0 && buses.length <= 1) return null;
+  if (!buses.length) return null;
   const avgCap = Math.round(
     buses.reduce((a, b) => a + b.cap, 0) / buses.length,
   );
@@ -118,6 +119,11 @@ export function mcFleetDelta(buses, totalG, bufPct, varPct, n, delta) {
 export function renderMcOut(buses, totalG, bufPct, varPct, n, tid) {
   const el = document.getElementById(tid);
   if (!el) return;
+  if (!buses.length) {
+    el.innerHTML =
+      '<div class="card"><p style="color:var(--c-mut);font-size:.82rem">No buses in this service to analyse.</p></div>';
+    return;
+  }
   const mc = runMonteCarlo(buses, totalG, bufPct, varPct, n);
   const mcMinus = mcFleetDelta(buses, totalG, bufPct, varPct, n, -1);
   // delta > 0 never triggers the null-return path, so this cast is safe.

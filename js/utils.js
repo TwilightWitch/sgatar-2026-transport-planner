@@ -53,7 +53,7 @@ export function cls(ratio) {
  * @returns {'Over'|'Near Full'|'OK'}
  */
 export function lbl(ratio) {
-  if (ratio > 1) return "Over";
+  if (ratio >= 1) return "Over";
   if (ratio >= NEAR_FULL_THRESHOLD) return "Near Full";
   return "OK";
 }

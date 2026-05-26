@@ -31,10 +31,13 @@
  * within each day.
  *
  * Passenger counts (`pax`) are distributed so that each full-group service
- * sums to 190 guests (the confirmed SGATAR 2026 delegate count).  Partial
- * services (Shuttle Loop, early-departure 14:30, mid-afternoon 17:15) retain
- * a proportional estimate.  Each bus starts with `lo: 1` (one Liaison Officer)
- * as a planning baseline; adjust via inline editing or CSV upload.
+ * sums to 190 guests (the confirmed SGATAR 2026 delegate count).  Where a
+ * journey has two route options (Hotels → Night Safari / MBS → Night Safari),
+ * the Hotels route carries all 190 delegates and the MBS route is kept as a
+ * standby service with `pax: 0`.  Partial services (Shuttle Loop,
+ * early-departure 14:30, mid-afternoon 17:15) retain a proportional estimate.
+ * Each bus starts with `lo: 1` (one Liaison Officer) as a planning baseline;
+ * adjust via inline editing or CSV upload.
  *
  * @type {ScheduleRow[]}
  */
@@ -594,7 +597,7 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:30",
     arv: "18:10",
-    pax: 27,
+    pax: 38,
     cap: 40,
     note: "",
     lo: 1,
@@ -608,7 +611,7 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:30",
     arv: "18:10",
-    pax: 27,
+    pax: 38,
     cap: 40,
     note: "",
     lo: 1,
@@ -622,7 +625,7 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:35",
     arv: "18:10",
-    pax: 27,
+    pax: 38,
     cap: 40,
     note: "",
     lo: 1,
@@ -636,7 +639,7 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:35",
     arv: "18:15",
-    pax: 27,
+    pax: 38,
     cap: 40,
     note: "",
     lo: 1,
@@ -650,7 +653,7 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:40",
     arv: "18:15",
-    pax: 27,
+    pax: 38,
     cap: 40,
     note: "",
     lo: 1,
@@ -664,9 +667,9 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:30",
     arv: "18:10",
-    pax: 27,
+    pax: 0,
     cap: 40,
-    note: "",
+    note: "Standby",
     lo: 1,
   },
   {
@@ -678,9 +681,9 @@ export const DEFAULT_SCHEDULE = [
     to: "Night Safari",
     dep: "17:35",
     arv: "18:15",
-    pax: 28,
+    pax: 0,
     cap: 40,
-    note: "",
+    note: "Standby",
     lo: 1,
   },
   {

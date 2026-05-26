@@ -249,7 +249,8 @@ function buildBusResultRow(bus) {
  */
 function deriveStatus(tg, tc, usable, bufPct, busCount, oc) {
   if (tg > tc) {
-    const extra = Math.ceil((tg - tc) / Math.max(tc / busCount, 1));
+    const avgCapPerBus = busCount > 0 ? tc / busCount : 1;
+    const extra = Math.ceil((tg - tc) / Math.max(avgCapPerBus, 1));
     return {
       statusClass: "cr",
       headline: `Over capacity \u2014 ~${extra} more bus${extra === 1 ? "" : "es"} needed`,

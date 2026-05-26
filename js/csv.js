@@ -115,7 +115,8 @@ function buildColIndex(hdr) {
  * @throws {Error} If the header lacks required columns or no data rows exist
  */
 export function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
+  // Strip UTF-8 BOM (U+FEFF) that some editors prepend to CSV files.
+  const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);}
   if (lines.length < 2)
     throw new Error("CSV must have a header row and at least one data row.");
 
