@@ -35,7 +35,7 @@ import { DEFAULT_SCHEDULE } from "./data.js";
  * }}
  */
 export const state = {
-  /** Live schedule rows — mutated by CSV upload, inline edits, add/remove bus. */
+  /** Live schedule rows: mutated by CSV upload, inline edits, add/remove bus. */
   schedule: DEFAULT_SCHEDULE.map((r) => ({ lo: 0, ...r })),
 
   /** Buses in the custom scenario planner. */

@@ -49,7 +49,7 @@ function activateTab(activeTab, tabs) {
 
 /**
  * Handles ArrowLeft / ArrowRight keyboard navigation within the tablist,
- * wrapping focus at the ends (WCAG 2.1.1 — keyboard accessible).
+ * wrapping focus at the ends (WCAG 2.1.1: keyboard accessible).
  *
  * @param {KeyboardEvent} event
  * @param {HTMLElement}   tab   The currently focused tab

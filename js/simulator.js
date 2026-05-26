@@ -4,7 +4,7 @@
  *
  * Provides functions to populate the service dropdown, run a single
  * demand simulation and render its results.  Imports `group` from
- * schedule.js (one-way dependency — schedule.js does not import this
+ * schedule.js (one-way dependency: schedule.js does not import this
  * module, preventing circular references).
  */
 

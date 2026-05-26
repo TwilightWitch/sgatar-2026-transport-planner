@@ -6,7 +6,7 @@
 #   - regular GovTech security patches
 FROM gdssingapore/airbase:nginx-1.28
 
-# Custom nginx config — the base image handles temp/cache paths in /tmp
+# Custom nginx config: the base image handles temp/cache paths in /tmp
 COPY --chown=app:app nginx.conf /etc/nginx/conf.d/default.conf
 
 # Application files

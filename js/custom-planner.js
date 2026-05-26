@@ -1,5 +1,5 @@
 /**
- * @file Custom scenario planner — build an ad-hoc fleet and simulate it.
+ * @file Custom scenario planner: build an ad-hoc fleet and simulate it.
  * @module custom-planner
  *
  * Lets users define a fleet from scratch (independent of the scheduled

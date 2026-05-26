@@ -64,7 +64,7 @@ export function lbl(ratio) {
  * Creates a seeded Linear Congruential Generator (LCG) PRNG.
  *
  * Using a deterministic PRNG instead of `Math.random()` makes simulation
- * results reproducible for a given seed — essential for the re-randomise
+ * results reproducible for a given seed: essential for the re-randomise
  * and Monte Carlo features.
  *
  * Constants (multiplier 1664525, increment 1013904223) are from Knuth's

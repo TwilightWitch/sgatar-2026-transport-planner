@@ -13,7 +13,7 @@ import { esc } from "./utils.js";
 
 /** @typedef {import("./data.js").ScheduleRow} ScheduleRow */
 
-/** CSV header row — canonical column order for export and import validation. */
+/** CSV header row: canonical column order for export and import validation. */
 export const CSV_HDR =
   "Day,Service,ArrivalBy,BusId,From,To,Depart,Arrive,PlannedPax,Capacity,Note,LO";
 

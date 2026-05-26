@@ -8,11 +8,11 @@ A static web application for planning and simulating bus transport logistics for
 
 ## Features
 
-- **Schedule** — view and inline-edit the full 4-day transport schedule; add or remove bus runs per service
-- **Simulator** — model guest demand across a selected service with configurable buffer and variability; re-randomise instantly
-- **Monte Carlo** — run up to 50 000 simulations to estimate overload probability and evaluate fleet-size trade-offs
-- **CSV import/export** — download the live schedule as CSV; upload a revised CSV to replace it
-- **Custom planner** — build an ad-hoc fleet independent of the scheduled routes and simulate it
+- **Schedule**: view and inline-edit the full 4-day transport schedule; add or remove bus runs per service
+- **Simulator**: model guest demand across a selected service with configurable buffer and variability; re-randomise instantly
+- **Monte Carlo**: run up to 50 000 simulations to estimate overload probability and evaluate fleet-size trade-offs
+- **CSV import/export**: download the live schedule as CSV; upload a revised CSV to replace it
+- **Custom planner**: build an ad-hoc fleet independent of the scheduled routes and simulate it
 
 ---
 
@@ -23,7 +23,7 @@ A static web application for planning and simulating bus transport logistics for
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | 24              | Local development                 |
 | [Airbase CLI](https://docs.airbase.sg)                            | latest          | Deployment to GovTech Airbase TC1 |
 
-No Node.js, npm or build step is required — the application is pure static HTML/CSS/ES modules.
+No Node.js, npm or build step is required: the application is pure static HTML/CSS/ES modules.
 
 ---
 
@@ -44,7 +44,7 @@ docker compose logs -f
 docker compose down
 ```
 
-The compose file mounts `/var/cache/nginx`, `/var/run` and `/tmp` as in-memory tmpfs volumes so the container filesystem is effectively read-only — matching the Airbase runtime security posture.
+The compose file mounts `/var/cache/nginx`, `/var/run` and `/tmp` as in-memory tmpfs volumes so the container filesystem is effectively read-only: matching the Airbase runtime security posture.
 
 ---
 
@@ -92,11 +92,11 @@ airbase container deploy --yes staging
 
 ```
 .
-├── app.js                 # Entry point — imports modules, wires events
+├── app.js                 # Entry point: imports modules, wires events
 ├── index.html             # Single-page shell (three tabpanels)
 ├── style.css              # Application styles
 │
-├── js/                    # ES modules (loaded natively — no bundler)
+├── js/                    # ES modules (loaded natively: no bundler)
 │   ├── data.js            # DEFAULT_SCHEDULE constant + ScheduleRow typedef
 │   ├── state.js           # Shared mutable state (schedule, customBuses, …)
 │   ├── utils.js           # Pure helpers: esc(), cls(), lbl(), lcg(), distribute(), mkBar()
@@ -128,7 +128,7 @@ app.js
  └── js/tabs.js
 ```
 
-`schedule.js` and `simulator.js` avoid a circular import via `state.onScheduleChange` — a callback set by `app.js` that calls both `renderSched()` and `populateSel()` whenever the schedule is structurally mutated.
+`schedule.js` and `simulator.js` avoid a circular import via `state.onScheduleChange`: a callback set by `app.js` that calls both `renderSched()` and `populateSel()` whenever the schedule is structurally mutated.
 
 ---
 
@@ -159,7 +159,7 @@ Download the live schedule to obtain a template.
 
 The compiled-in default schedule is in `js/data.js` (`DEFAULT_SCHEDULE` array). Each object follows the `ScheduleRow` typedef documented at the top of that file. Edit the array and redeploy to change the factory defaults.
 
-Alternatively, upload a revised CSV at runtime — changes persist in-memory for the session and can be downloaded again after editing.
+Alternatively, upload a revised CSV at runtime: changes persist in-memory for the session and can be downloaded again after editing.
 
 ---
 
@@ -168,6 +168,6 @@ Alternatively, upload a revised CSV at runtime — changes persist in-memory for
 - Base image: `gdssingapore/airbase:nginx-1.28` (regularly updated, tracks nginx stable)
 - Container runs as non-root user `app` (UID 999)
 - Filesystem is effectively read-only (`read_only: true` in compose; tmpfs for nginx temp paths)
-- No server-side code — attack surface is limited to static file serving
+- No server-side code: attack surface is limited to static file serving
 - All schedule data rendered via HTML-escaped strings (XSS-safe)
 - Content Security Policy set in `nginx.conf`
