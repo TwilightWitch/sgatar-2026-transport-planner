@@ -116,7 +116,7 @@ function buildColIndex(hdr) {
  */
 export function parseCSV(text) {
   // Strip UTF-8 BOM (U+FEFF) that some editors prepend to CSV files.
-  const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);}
+  const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
   if (lines.length < 2)
     throw new Error("CSV must have a header row and at least one data row.");
 
