@@ -75,7 +75,7 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                     key={trip.id}
                     className="text-sm text-red-700 dark:text-red-300"
                   >
-                    <strong>{trip.busIdentifier}</strong> — {trip.serviceName} (
+                    <strong>{trip.busIdentifier}</strong> ({trip.serviceName},{" "}
                     {trip.pickupLocation})
                     {trip.sosMessage && (
                       <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs dark:bg-red-900">

@@ -33,6 +33,103 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
 }
 
+async function handleClearDelay(routeId: string): Promise<NextResponse> {
+  if (process.env.DATABASE_URL) {
+    try {
+      const { db } = await import("@/db");
+      const { activeTrips } = await import("@/db/schema");
+      const { eq, and, sql } = await import("drizzle-orm");
+
+      const updated = await db
+        .update(activeTrips)
+        .set({ status: "scheduled" })
+        .where(
+          and(
+            eq(activeTrips.routeId, routeId),
+            sql`${activeTrips.status} = 'delayed'`,
+          ),
+        )
+        .returning();
+
+      return NextResponse.json({
+        message: `Cleared delay on ${updated.length} trip${updated.length === 1 ? "" : "s"}`,
+        affectedTrips: updated.length,
+      });
+    } catch (error) {
+      console.error("POST bulk-delay clear DB error, falling back:", error);
+    }
+  }
+
+  const storeTrips = getTrips();
+  const affected = storeTrips.filter(
+    (t) => t.routeId === routeId && t.status === "delayed",
+  );
+  for (const trip of affected) {
+    updateTrip(trip.id, { status: "scheduled" });
+  }
+  return NextResponse.json({
+    message: `Cleared delay on ${affected.length} trip${affected.length === 1 ? "" : "s"}`,
+    affectedTrips: affected.length,
+  });
+}
+
+async function handleApplyDelay(
+  routeId: string,
+  delayMinutes: number,
+): Promise<NextResponse> {
+  if (process.env.DATABASE_URL) {
+    try {
+      const { db } = await import("@/db");
+      const { activeTrips, routes } = await import("@/db/schema");
+      const { eq, and, sql } = await import("drizzle-orm");
+
+      await db
+        .update(routes)
+        .set({
+          scheduledDeparture: sql`(${routes.scheduledDeparture}::time + (${delayMinutes} || ' minutes')::interval)::time`,
+        })
+        .where(eq(routes.id, routeId));
+
+      const updated = await db
+        .update(activeTrips)
+        .set({ status: "delayed" })
+        .where(
+          and(
+            eq(activeTrips.routeId, routeId),
+            sql`${activeTrips.status} != 'completed'`,
+          ),
+        )
+        .returning();
+
+      return NextResponse.json({
+        message: `Delayed ${updated.length} trip${updated.length === 1 ? "" : "s"} by ${delayMinutes} minutes`,
+        affectedTrips: updated.length,
+      });
+    } catch (error) {
+      console.error("POST bulk-delay DB error, falling back:", error);
+    }
+  }
+
+  const trips = getTrips();
+  const affected = trips.filter(
+    (t) => t.routeId === routeId && t.status !== "completed",
+  );
+  for (const trip of affected) {
+    updateTrip(trip.id, {
+      status: "delayed",
+      scheduledDeparture: addMinutesToTime(
+        trip.scheduledDeparture,
+        delayMinutes,
+      ),
+      scheduledArrival: addMinutesToTime(trip.scheduledArrival, delayMinutes),
+    });
+  }
+  return NextResponse.json({
+    message: `Delayed ${affected.length} trip${affected.length === 1 ? "" : "s"} by ${delayMinutes} minutes`,
+    affectedTrips: affected.length,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as BulkDelayBody;
@@ -44,49 +141,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Clear delay mode: reset status only, no time change ───────────────
     if (body.clearDelay) {
-      if (process.env.DATABASE_URL) {
-        try {
-          const { db } = await import("@/db");
-          const { activeTrips } = await import("@/db/schema");
-          const { eq, and, sql } = await import("drizzle-orm");
-
-          const updated = await db
-            .update(activeTrips)
-            .set({ status: "scheduled" })
-            .where(
-              and(
-                eq(activeTrips.routeId, body.routeId),
-                sql`${activeTrips.status} = 'delayed'`,
-              ),
-            )
-            .returning();
-
-          return NextResponse.json({
-            message: `Cleared delay on ${updated.length} trip${updated.length === 1 ? "" : "s"}`,
-            affectedTrips: updated.length,
-          });
-        } catch (error) {
-          console.error("POST bulk-delay clear DB error, falling back:", error);
-        }
-      }
-
-      // In-memory fallback
-      const storeTrips = getTrips();
-      const affected = storeTrips.filter(
-        (t) => t.routeId === body.routeId && t.status === "delayed",
-      );
-      for (const trip of affected) {
-        updateTrip(trip.id, { status: "scheduled" });
-      }
-      return NextResponse.json({
-        message: `Cleared delay on ${affected.length} trip${affected.length === 1 ? "" : "s"}`,
-        affectedTrips: affected.length,
-      });
+      return handleClearDelay(body.routeId);
     }
 
-    // ── Apply delay mode ──────────────────────────────────────────────────
     if (
       typeof body.delayMinutes !== "number" ||
       body.delayMinutes <= 0 ||
@@ -98,65 +156,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Apply delay mode ──────────────────────────────────────────────────
-    // If DB is configured, use it
-    if (process.env.DATABASE_URL) {
-      try {
-        const { db } = await import("@/db");
-        const { activeTrips, routes } = await import("@/db/schema");
-        const { eq, and, sql } = await import("drizzle-orm");
-
-        await db
-          .update(routes)
-          .set({
-            scheduledDeparture: sql`(${routes.scheduledDeparture}::time + (${body.delayMinutes} || ' minutes')::interval)::time`,
-          })
-          .where(eq(routes.id, body.routeId));
-
-        const updated = await db
-          .update(activeTrips)
-          .set({ status: "delayed" })
-          .where(
-            and(
-              eq(activeTrips.routeId, body.routeId),
-              sql`${activeTrips.status} != 'completed'`,
-            ),
-          )
-          .returning();
-
-        return NextResponse.json({
-          message: `Delayed ${updated.length} trip${updated.length === 1 ? "" : "s"} by ${body.delayMinutes} minutes`,
-          affectedTrips: updated.length,
-        });
-      } catch (error) {
-        console.error("POST bulk-delay DB error, falling back:", error);
-      }
-    }
-
-    // Fallback: update in-memory store
-    const trips = getTrips();
-    const affected = trips.filter(
-      (t) => t.routeId === body.routeId && t.status !== "completed",
-    );
-
-    for (const trip of affected) {
-      updateTrip(trip.id, {
-        status: "delayed",
-        scheduledDeparture: addMinutesToTime(
-          trip.scheduledDeparture,
-          body.delayMinutes,
-        ),
-        scheduledArrival: addMinutesToTime(
-          trip.scheduledArrival,
-          body.delayMinutes,
-        ),
-      });
-    }
-
-    return NextResponse.json({
-      message: `Delayed ${affected.length} trip${affected.length === 1 ? "" : "s"} by ${body.delayMinutes} minutes`,
-      affectedTrips: affected.length,
-    });
+    return handleApplyDelay(body.routeId, body.delayMinutes);
   } catch (error) {
     console.error("POST /api/trips/bulk-delay error:", error);
     return NextResponse.json(

@@ -4,6 +4,7 @@ import { AdhocBusForm } from "@/components/AdhocBusForm";
 import { BulkShiftSchedule } from "@/components/BulkShiftSchedule";
 import { CsvUpload } from "@/components/CsvUpload";
 import { FleetDashboard } from "@/components/FleetDashboard";
+import { QuickGuide } from "@/components/QuickGuide";
 import { ScheduleEditor } from "@/components/ScheduleEditor";
 import { SimulatorPanel } from "@/components/SimulatorPanel";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
@@ -21,6 +22,35 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
+      <QuickGuide
+        title="Control Room Quick Reference"
+        items={[
+          {
+            icon: "🚨",
+            text: "Fleet Dashboard: SOS alerts flash red at the top. The table shows every active bus with live headcount, status, and flags.",
+          },
+          {
+            icon: "🚌",
+            text: "Add Ad-Hoc Bus: Deploy an unplanned ghost bus on an existing route when demand exceeds capacity.",
+          },
+          {
+            icon: "⏱️",
+            text: "Bulk Delay: Apply a delay (in minutes) to all buses on a route at once, or tap Clear Delay to reset their status to Scheduled.",
+          },
+          {
+            icon: "✏️",
+            text: "Schedule Editor: Click any cell to edit it inline. Use the day filter chips to focus on a single conference day.",
+          },
+          {
+            icon: "📊",
+            text: "Simulator — Model how many buses are needed for a given guest count and variability before the event.",
+          },
+          {
+            icon: "📄",
+            text: "CSV Upload — Bulk-update or add trips from a spreadsheet. See the column reference table for the correct header names.",
+          },
+        ]}
+      />
       {isLoading && (
         <output className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />

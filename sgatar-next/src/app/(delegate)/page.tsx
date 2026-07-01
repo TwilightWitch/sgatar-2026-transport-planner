@@ -2,9 +2,11 @@
 
 import { DepartureTimeline } from "@/components/DepartureTimeline";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { QuickGuide } from "@/components/QuickGuide";
 import { WhatsAppBanner } from "@/components/WhatsAppBanner";
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
+import { useI18n } from "@/lib/i18n/provider";
 import { useState } from "react";
 
 function filterTrips(
@@ -19,6 +21,7 @@ function filterTrips(
 
 export default function DelegatePage() {
   const { data: trips, isLoading } = useActiveTrips();
+  const { t } = useI18n();
   const [filterLocation, setFilterLocation] = useState<string>("all");
 
   // Extract unique pickup/dropoff locations for the hotel filter
@@ -37,12 +40,23 @@ export default function DelegatePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Transport Schedule
+          {t.transportSchedule}
         </h2>
         <LanguageSwitcher />
       </div>
 
       <WhatsAppBanner />
+
+      <QuickGuide
+        title={t.quickGuide}
+        items={[
+          { icon: "🔄", text: t.guideAutoRefresh },
+          { icon: "🏨", text: t.guideHotelFilter },
+          { icon: "🔴", text: t.guideBusFull },
+          { icon: "📱", text: t.guideWhatsApp },
+          { icon: "🌐", text: t.guideLanguage },
+        ]}
+      />
 
       {/* Hotel/Location filter */}
       {locations.length > 0 && (
@@ -51,7 +65,7 @@ export default function DelegatePage() {
             htmlFor="location-filter"
             className="block text-xs font-medium text-gray-600 dark:text-gray-400"
           >
-            Filter by your hotel / location
+            {t.filterByHotel}
           </label>
           <select
             id="location-filter"
@@ -59,7 +73,7 @@ export default function DelegatePage() {
             onChange={(e) => setFilterLocation(e.target.value)}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           >
-            <option value="all">All locations</option>
+            <option value="all">{t.allLocations}</option>
             {locations.map((loc) => (
               <option key={loc} value={loc}>
                 {loc}
@@ -81,40 +95,40 @@ export default function DelegatePage() {
       {/* Conference Schedule Placeholder */}
       <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Conference Schedule
+          {t.conferenceSchedule}
         </h2>
         <div className="mt-4 space-y-3">
           <ScheduleDay
             day="7 Sep (Mon)"
-            events={["17:00 — Welcome Reception at MBS"]}
+            events={["17:00: Welcome Reception at MBS"]}
           />
           <ScheduleDay
             day="8 Sep (Tue)"
             events={[
-              "09:00 — Opening Ceremony",
-              "10:00 — Plenary Session",
-              "18:45 — Opening Dinner at Straits Kitchen",
+              "09:00: Opening Ceremony",
+              "10:00: Plenary Session",
+              "18:45: Opening Dinner at Straits Kitchen",
             ]}
           />
           <ScheduleDay
             day="9 Sep (Wed)"
             events={[
-              "09:00 — Working Sessions",
-              "14:00 — Country Presentations",
-              "18:15 — Night Safari Excursion",
+              "09:00: Working Sessions",
+              "14:00: Country Presentations",
+              "18:15: Night Safari Excursion",
             ]}
           />
           <ScheduleDay
             day="10 Sep (Thu)"
             events={[
-              "09:00 — Closing Session",
-              "14:00 — Free & Easy / Shuttle Loop",
-              "19:00 — Farewell Dinner at MBS",
+              "09:00: Closing Session",
+              "14:00: Free and Easy / Shuttle Loop",
+              "19:00: Farewell Dinner at MBS",
             ]}
           />
         </div>
         <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-          Full programme details will be distributed at registration.
+          {t.programmePending}
         </p>
       </section>
     </div>

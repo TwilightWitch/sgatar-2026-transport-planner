@@ -44,7 +44,7 @@ export function CsvUpload({ onUploaded }: Readonly<CsvUploadProps>) {
           setStatus(`Error: ${data.error ?? "Unknown error"}`);
         }
       })
-      .catch(() => setStatus("Upload failed — check network connection"))
+      .catch(() => setStatus("Upload failed. Check your network connection."))
       .finally(() => setIsUploading(false));
   };
 

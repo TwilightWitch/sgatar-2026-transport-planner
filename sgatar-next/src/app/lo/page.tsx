@@ -1,12 +1,16 @@
 "use client";
 
 import { HeadcountControls } from "@/components/HeadcountControls";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { QuickGuide } from "@/components/QuickGuide";
 import { SosButton } from "@/components/SosButton";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
+import { useI18n } from "@/lib/i18n/provider";
 import { useState } from "react";
 
 export default function LoPage() {
   const { data: trips, isLoading, error } = useActiveTrips();
+  const { t } = useI18n();
   const [filterDay, setFilterDay] = useState<string>("all");
 
   const activeTrips =
@@ -20,7 +24,7 @@ export default function LoPage() {
   // Group by service
   const grouped = filtered.reduce<Record<string, typeof filtered>>(
     (acc, trip) => {
-      const key = `${trip.conferenceDay} — ${trip.serviceName}`;
+      const key = `${trip.conferenceDay}: ${trip.serviceName}`;
       if (!acc[key]) acc[key] = [];
       acc[key].push(trip);
       return acc;
@@ -30,6 +34,21 @@ export default function LoPage() {
 
   return (
     <div className="space-y-4">
+      {/* Language switcher */}
+      <div className="flex justify-end">
+        <LanguageSwitcher />
+      </div>
+
+      <QuickGuide
+        title={t.loQuickGuide}
+        items={[
+          { icon: "➕", text: t.guideLoIncrement },
+          { icon: "🔢", text: t.guideLoTypeCount },
+          { icon: "↔️", text: t.guideLoSlider },
+          { icon: "🔴", text: t.guideLoSos },
+          { icon: "📶", text: t.guideLoOffline },
+        ]}
+      />
       {isLoading && (
         <output className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
