@@ -1,3 +1,14 @@
+/**
+ * @file PortalNav component.
+ *
+ * Compact horizontal navigation bar rendered in every portal header.  Links
+ * to all four portals (Delegate, LO, Admin, Display) with the current portal
+ * highlighted.  Uses Next.js `<Link>` for client-side navigation.
+ *
+ * Designed for dark header backgrounds — active links use `bg-white/20` and
+ * inactive links use `text-white/70` to meet WCAG 4.5:1 contrast on dark
+ * backgrounds.
+ */
 "use client";
 
 import Link from "next/link";

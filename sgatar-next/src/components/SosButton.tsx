@@ -1,3 +1,17 @@
+/**
+ * @file SosButton component.
+ *
+ * LO portal widget that allows a Liaison Officer to raise or clear an SOS /
+ * escalation flag on their assigned bus.
+ *
+ * When the LO taps the button while no SOS is active, a text input appears so
+ * they can briefly describe the issue before the flag is submitted.  The
+ * description is stored as `sosMessage` and surfaced in the admin fleet
+ * dashboard so the control room can act with context.
+ *
+ * Tapping the button a second time (while SOS is active) immediately clears
+ * the flag and the message.
+ */
 "use client";
 
 import { useUpdateHeadcount, type TripWithRoute } from "@/hooks/useLiveFleet";

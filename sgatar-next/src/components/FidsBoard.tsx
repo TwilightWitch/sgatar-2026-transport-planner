@@ -1,3 +1,14 @@
+/**
+ * @file FidsBoard component.
+ *
+ * Airport-style Flight Information Display System (FIDS) board intended to
+ * be cast to a large lobby monitor or TV screen.  Shows all non-completed
+ * trips sorted by scheduled departure with large, high-contrast text and
+ * status columns (ON TIME / BOARDING / DELAYED / DEPARTED).
+ *
+ * No user interaction is required — the parent `/display` page polls the trip
+ * list via {@link useActiveTrips} and passes the updated array down.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";

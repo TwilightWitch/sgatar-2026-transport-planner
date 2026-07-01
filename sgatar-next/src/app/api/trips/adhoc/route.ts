@@ -1,3 +1,15 @@
+/**
+ * @file Ad-hoc bus API route — `POST /api/trips/adhoc`.
+ *
+ * Creates an unplanned "ghost bus" trip that is added to the live roster
+ * immediately.  Useful when demand exceeds the pre-planned fleet and an
+ * additional vehicle is dispatched on-the-fly.
+ *
+ * The new trip is tagged `isAdhoc: true` so it can be visually distinguished
+ * in the admin dashboard and FIDS display.
+ *
+ * Protected by the proxy authentication layer (admin token required).
+ */
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
 import { addTrip, getTrips } from "@/lib/tripStore";
 import { NextRequest, NextResponse } from "next/server";
@@ -65,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Fallback: add to in-memory store
     const existingTrips = getTrips();
     const newTrip: TripWithRoute = {
-      id: `adhoc-${Date.now()}`,
+      id: `adhoc-${crypto.randomUUID()}`,
       routeId: body.routeId,
       busIdentifier: body.busIdentifier,
       maxCapacity: capacity,

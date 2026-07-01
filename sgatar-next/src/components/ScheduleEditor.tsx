@@ -1,3 +1,17 @@
+/**
+ * @file ScheduleEditor component.
+ *
+ * Admin panel inline-editable table showing the full trip roster.  Each cell
+ * (service name, bus ID, pickup, dropoff, departure time, arrival time, status)
+ * can be clicked to enter edit mode; changes are committed with Enter or blur
+ * and persisted via `PATCH /api/trips/[id]`.
+ *
+ * Trips can be filtered by conference day using the day-chip controls at the
+ * top of the table, and individual trips can be permanently deleted.
+ *
+ * Invokes `onUpdated` after every successful write so the parent page can
+ * invalidate its React Query cache.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";

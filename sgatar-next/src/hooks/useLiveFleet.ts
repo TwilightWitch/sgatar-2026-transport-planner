@@ -1,3 +1,19 @@
+/**
+ * @file Live fleet data hooks.
+ *
+ * Provides two React Query hooks consumed throughout the app:
+ *
+ * - {@link useActiveTrips}   — Polls `/api/trips` every 4 s and returns the
+ *   full `TripWithRoute[]` list.  All portals share this single cached query.
+ *
+ * - {@link useUpdateHeadcount} — Mutation hook that PATCHes a single trip.  It
+ *   applies an optimistic update immediately, rolls back on error, and queues
+ *   changes in `localStorage` when the device is offline so they are replayed
+ *   once connectivity is restored.
+ *
+ * Also exports the {@link TripWithRoute} shape that is the canonical data
+ * contract between the API and all UI components.
+ */
 "use client";
 
 import {
@@ -72,6 +88,13 @@ async function patchTrip(update: HeadcountUpdate): Promise<TripWithRoute> {
   return res.json() as Promise<TripWithRoute>;
 }
 
+/**
+ * Polls `/api/trips` every 4 seconds and returns the current list of active
+ * trips joined with their route metadata.
+ *
+ * Data is considered stale after 2 s so refetches triggered by window focus or
+ * network restore pick up the latest server state promptly.
+ */
 export function useActiveTrips() {
   return useQuery<TripWithRoute[]>({
     queryKey: TRIPS_QUERY_KEY,
@@ -124,6 +147,18 @@ async function syncOfflineQueue(queryClient: QueryClient): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: TRIPS_QUERY_KEY });
 }
 
+/**
+ * Mutation hook for updating a trip's headcount, status, or SOS flag.
+ *
+ * Behaviour:
+ * - **Online**: PATCHes the server and invalidates the trip cache on settle.
+ * - **Offline**: Serialises the update into `localStorage` and throws so the
+ *   caller can display an offline indicator.  Updates are replayed in order
+ *   when the `online` browser event fires.
+ * - **Optimistic UI**: The cache is updated immediately so the LO sees the
+ *   change without waiting for the round-trip.  A rollback is applied if the
+ *   server returns an error.
+ */
 export function useUpdateHeadcount() {
   const queryClient = useQueryClient();
   const syncingRef = useRef(false);

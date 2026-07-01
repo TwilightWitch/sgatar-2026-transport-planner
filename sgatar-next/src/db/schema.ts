@@ -1,3 +1,13 @@
+/**
+ * @file Drizzle ORM schema definitions.
+ *
+ * Defines three tables:
+ * - `routes`       — The canonical set of planned bus routes (day, service, pickup/dropoff, times).
+ * - `active_trips` — Live, mutable instances of a route for an event day (one row per physical bus).
+ * - `headcount_logs` — Append-only audit log of every headcount change recorded by LOs.
+ *
+ * Generated TypeScript types are re-exported at the bottom of the file.
+ */
 import {
   boolean,
   integer,

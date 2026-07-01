@@ -97,7 +97,7 @@ export function distribute(
   // Correct rounding drift so the sum always equals `total` exactly
   const drift = result.reduce((a, b) => a + b, 0) - total;
   if (drift !== 0) {
-    result[result.length - 1] -= drift;
+    result[result.length - 1] = Math.max(0, (result.at(-1) ?? 0) - drift);
   }
 
   return result;

@@ -1,3 +1,15 @@
+/**
+ * @file Single-trip API routes — `PATCH /api/trips/[id]` and `DELETE /api/trips/[id]`.
+ *
+ * PATCH: Applies a partial update to the specified trip (headcount, status, SOS
+ * flag, schedule times, driver details, etc.).  Writes go to Neon when
+ * `DATABASE_URL` is set; otherwise the in-memory store is updated.
+ *
+ * DELETE: Removes the trip from the active roster. Currently only supported via
+ * the in-memory store; DB-backed deletion can be added when needed.
+ *
+ * Both routes are protected by the proxy authentication layer.
+ */
 import { deleteTrip, updateTrip } from "@/lib/tripStore";
 import { NextRequest, NextResponse } from "next/server";
 

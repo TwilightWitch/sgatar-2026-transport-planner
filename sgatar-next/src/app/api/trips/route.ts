@@ -1,3 +1,13 @@
+/**
+ * @file Trips list API route — `GET /api/trips`.
+ *
+ * Returns all active trips joined with their route metadata.  When
+ * `DATABASE_URL` is configured the data is fetched from Neon; otherwise the
+ * in-memory static fallback store is used.
+ *
+ * This endpoint is polled by every connected client (delegate, LO, admin)
+ * every 4 seconds via {@link useActiveTrips}.
+ */
 import { getTrips } from "@/lib/tripStore";
 import { NextResponse } from "next/server";
 

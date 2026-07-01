@@ -1,6 +1,11 @@
 import { neon } from "@neondatabase/serverless";
+import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/neon-http";
 import { activeTrips, routes } from "./schema";
+
+// Load .env.local (dev) then fall back to parent .env
+config({ path: ".env.local", override: false });
+config({ path: "../.env", override: false });
 
 async function seed() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -29,7 +34,7 @@ async function seed() {
       conferenceDay: "7 Sep (Mon)",
       serviceName: "Hotels → MBS (Welcome Reception)",
       targetArrival: "17:00",
-      pickupLocation: "Parkroyal on Beach Road",
+      pickupLocation: "Parkroyal Collection Marina Bay",
       dropoffLocation: "MBS Convention Centre",
       scheduledDeparture: "16:30",
       scheduledArrival: "16:50",
@@ -50,7 +55,7 @@ async function seed() {
       serviceName: "MBS → Hotels (Return)",
       targetArrival: "—",
       pickupLocation: "MBS Convention Centre",
-      dropoffLocation: "Parkroyal on Beach Road",
+      dropoffLocation: "Parkroyal Collection Marina Bay",
       scheduledDeparture: "21:00",
       scheduledArrival: "21:20",
       defaultCapacity: 40,
@@ -69,7 +74,7 @@ async function seed() {
       conferenceDay: "8 Sep (Tue)",
       serviceName: "Hotels → MBS (Morning)",
       targetArrival: "08:45",
-      pickupLocation: "Parkroyal on Beach Road",
+      pickupLocation: "Parkroyal Collection Marina Bay",
       dropoffLocation: "MBS Convention Centre",
       scheduledDeparture: "08:00",
       scheduledArrival: "08:20",
@@ -142,11 +147,8 @@ async function seed() {
   console.log(`Inserted ${insertedRoutes.length} routes.`);
 
   // Seed initial active trips for the first operational day
-  const day1Routes = insertedRoutes.filter(
-    (r) => r.conferenceDay === "7 Sep (Mon)",
-  );
-
-  const initialTrips = day1Routes.flatMap((route, idx) => [
+  // Seed two buses per route for every conference day
+  const initialTrips = insertedRoutes.flatMap((route, idx) => [
     {
       routeId: route.id,
       busIdentifier: `BUS-${String(idx * 2 + 1).padStart(2, "0")}`,

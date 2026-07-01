@@ -1,3 +1,21 @@
+/**
+ * @file SimulatorPanel component.
+ *
+ * Admin panel section that provides two demand-planning tools:
+ *
+ * 1. **Single simulation** — Distributes a configurable guest count across the
+ *    buses of a selected service using a seeded LCG PRNG and a variability
+ *    factor.  Useful for visualising one plausible load scenario.
+ *
+ * 2. **Repeated simulations** — Runs the simulation N times (default 1 000)
+ *    and aggregates overload probability, average over-capacity count, and a
+ *    fleet-size impact table (−1 / current / +1 bus).  Useful for planning
+ *    whether to add or remove a bus from a service.
+ *
+ * Both tools call the pure functions in {@link module:simulationEngine}.
+ * Single-bus services are allowed — the simulator simply shows the maximum
+ * load on that one bus.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
@@ -37,13 +55,14 @@ function formatPercent(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-/** Check whether a service has multiple buses for meaningful simulation */
-function hasMultipleBuses(trips: TripWithRoute[], service: string): boolean {
+/**
+ * Returns the number of buses assigned to a given service string.
+ * Used to show an informational note when only one bus is present.
+ */
+function busCount(trips: TripWithRoute[], service: string): number {
   const [day, svc] = service.split(" — ");
-  const count = trips.filter(
-    (t) => t.conferenceDay === day && t.serviceName === svc,
-  ).length;
-  return count > 1;
+  return trips.filter((t) => t.conferenceDay === day && t.serviceName === svc)
+    .length;
 }
 
 export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
@@ -65,7 +84,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
   const [isRunning, setIsRunning] = useState(false);
   const seedRef = useRef(42);
 
-  const canSimulate = hasMultipleBuses(trips, selectedService);
+  const singleBus = busCount(trips, selectedService) === 1;
 
   const getServiceBuses = useCallback((): Bus[] => {
     const [day, svc] = selectedService.split(" — ");
@@ -80,7 +99,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
   }, [selectedService, trips]);
 
   const handleSimulate = useCallback(() => {
-    if (isRunning || !canSimulate) return;
+    if (isRunning) return;
     setIsRunning(true);
     seedRef.current = Math.floor(Math.random() * 100000);
     const buses = getServiceBuses();
@@ -88,6 +107,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
       setIsRunning(false);
       return;
     }
+    // With a single bus, distribute() still works — all guests land on it
     const result = simulate(
       buses,
       guests,
@@ -100,7 +120,6 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
     requestAnimationFrame(() => setIsRunning(false));
   }, [
     isRunning,
-    canSimulate,
     getServiceBuses,
     guests,
     buffer,
@@ -109,7 +128,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
   ]);
 
   const handleRepeatedSims = useCallback(() => {
-    if (isRunning || !canSimulate) return;
+    if (isRunning) return;
     setIsRunning(true);
     seedRef.current = Math.floor(Math.random() * 100000);
     const buses = getServiceBuses();
@@ -127,7 +146,6 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
     requestAnimationFrame(() => setIsRunning(false));
   }, [
     isRunning,
-    canSimulate,
     getServiceBuses,
     guests,
     buffer,
@@ -157,9 +175,9 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
             className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           >
             {services.map((s) => (
-              <option key={s} value={s} disabled={!hasMultipleBuses(trips, s)}>
+              <option key={s} value={s}>
                 {s}
-                {!hasMultipleBuses(trips, s) ? " (single bus)" : ""}
+                {busCount(trips, s) === 1 ? " (single bus)" : ""}
               </option>
             ))}
           </select>
@@ -225,19 +243,19 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
             id="sim-mc-runs"
             type="number"
             min={100}
-            max={100000}
+            max={10000}
             step={100}
             value={mcRuns}
-            onChange={(e) => setMcRuns(Number(e.target.value))}
+            onChange={(e) => setMcRuns(Math.min(10000, Number(e.target.value)))}
             className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           />
         </div>
       </div>
 
-      {!canSimulate && (
+      {singleBus && (
         <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
-          This service has only one bus — simulation requires multiple buses to
-          model demand distribution.
+          This service has only one bus — simulation shows maximum load on that
+          bus rather than demand distribution across a fleet.
         </p>
       )}
 
@@ -245,7 +263,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
         <button
           type="button"
           onClick={handleSimulate}
-          disabled={!canSimulate || isRunning}
+          disabled={isRunning}
           className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Run Simulation
@@ -253,7 +271,7 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
         <button
           type="button"
           onClick={handleRepeatedSims}
-          disabled={!canSimulate || isRunning}
+          disabled={isRunning}
           className="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Repeated Simulations
@@ -292,8 +310,8 @@ export function SimulatorPanel({ trips }: Readonly<SimulatorPanelProps>) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {simResult.buses.map((bus) => (
-                  <tr key={String(bus.id)}>
+                {simResult.buses.map((bus, i) => (
+                  <tr key={`${String(bus.id)}-${i}`}>
                     <td className="px-2 py-1 font-medium">{String(bus.id)}</td>
                     <td className="px-2 py-1">{bus.from}</td>
                     <td className="px-2 py-1">{bus.to}</td>

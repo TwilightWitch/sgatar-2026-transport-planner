@@ -33,6 +33,8 @@ npm run db:seed
 npm run dev
 ```
 
+Next.js only reads env files from this folder, so keep `.env`, `.env.local`, or `.env.staging` inside `sgatar-next/` rather than only at the repository root.
+
 ---
 
 ## Portal Access
@@ -169,6 +171,8 @@ Ported from the original planning tools:
 | `NEXT_PUBLIC_WHATSAPP_INVITE_URL` | WhatsApp group invite link shown to delegates |
 | `LO_PASSCODE`                     | Passcode for Liaison Officer portal           |
 | `ADMIN_PASSCODE`                  | Passcode for Admin/Control Room portal        |
+
+Keep these files in `sgatar-next/` so `next dev` and `next build` can load them.
 
 ---
 

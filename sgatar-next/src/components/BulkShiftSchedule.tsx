@@ -1,3 +1,14 @@
+/**
+ * @file BulkShiftSchedule component.
+ *
+ * Admin panel form that shifts the scheduled departure time of all
+ * non-completed trips on a selected route forward by a given number of minutes,
+ * simultaneously marking them as `"delayed"`.
+ *
+ * Useful when a traffic incident or late venue open affects an entire service
+ * rather than individual buses.  Sends a `POST /api/trips/bulk-delay` request
+ * and invokes `onShifted` on success so the parent can refresh the trip list.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
@@ -19,38 +30,42 @@ export function BulkShiftSchedule({
   const [delayMinutes, setDelayMinutes] = useState("15");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [resultOk, setResultOk] = useState(true);
 
   const uniqueRoutes = Array.from(
     new Map(trips.map((trip) => [trip.routeId, trip])).values(),
   );
 
-  const handleSubmit = (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-    if (!routeId) return;
-
+  const post = (body: Record<string, unknown>) => {
     setSubmitting(true);
     setResult(null);
     void fetch("/api/trips/bulk-delay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        routeId,
-        delayMinutes: Number.parseInt(delayMinutes, 10),
-      }),
+      body: JSON.stringify(body),
     })
       .then(async (res) => {
-        if (res.ok) {
-          const data = (await res.json()) as { message: string };
-          setResult(data.message);
-          onShifted?.();
-        } else {
-          const err = (await res.json()) as { error: string };
-          setResult(`Error: ${err.error}`);
-        }
+        const data = (await res.json()) as { message?: string; error?: string };
+        setResultOk(res.ok);
+        setResult(
+          res.ok
+            ? (data.message ?? "Done")
+            : `Error: ${data.error ?? "Unknown error"}`,
+        );
+        if (res.ok) onShifted?.();
       })
-      .finally(() => {
-        setSubmitting(false);
-      });
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleSubmit = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    if (!routeId) return;
+    post({ routeId, delayMinutes: Number.parseInt(delayMinutes, 10) });
+  };
+
+  const handleClear = () => {
+    if (!routeId) return;
+    post({ routeId, clearDelay: true });
   };
 
   return (
@@ -110,18 +125,34 @@ export function BulkShiftSchedule({
       </div>
 
       {result && (
-        <output className="mt-3 block text-xs text-gray-600 dark:text-gray-400">
+        <output
+          className={`mt-3 block text-xs ${
+            resultOk
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-red-600 dark:text-red-400"
+          }`}
+        >
           {result}
         </output>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-4 w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-700"
-      >
-        {submitting ? "Applying..." : "Apply Delay"}
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-700"
+        >
+          {submitting ? "Applying..." : "Apply Delay"}
+        </button>
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={submitting || !routeId}
+          className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+        >
+          Clear Delay
+        </button>
+      </div>
     </form>
   );
 }

@@ -1,3 +1,17 @@
+/**
+ * @file CSV upload API route — `POST /api/trips/upload`.
+ *
+ * Accepts a `multipart/form-data` request containing a single `.csv` file.
+ * Each data row is matched against the existing trip roster by Bus Identifier +
+ * Conference Day + Service Name:
+ * - **Match found** → fields from the row are merged into the existing trip.
+ * - **No match, bus ID present** → a new trip is created from the row data.
+ * - **No bus ID** → the row is skipped.
+ *
+ * Limits: 512 KB file size, 500 rows per upload.
+ *
+ * Protected by the proxy authentication layer (admin token required).
+ */
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
 import { addTrip, getTrips, updateTrip } from "@/lib/tripStore";
 import { NextRequest, NextResponse } from "next/server";
@@ -58,7 +72,7 @@ function buildNewTrip(
   existingTrips: TripWithRoute[],
 ): TripWithRoute {
   return {
-    id: `csv-${Date.now()}-${index}`,
+    id: `csv-${crypto.randomUUID()}`,
     routeId: `csv-route-${index}`,
     busIdentifier: col(row, "busidentifier", "bus", "id") || `Bus ${index}`,
     maxCapacity: Number(col(row, "maxcapacity", "cap")) || 40,
@@ -126,8 +140,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Size limit: 1 MB to prevent OOM
+    if (file.size > 1_048_576) {
+      return NextResponse.json(
+        { error: "File too large (max 1 MB)" },
+        { status: 400 },
+      );
+    }
+
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+
+    // Row limit: max 500 data rows
+    if (lines.length > 501) {
+      return NextResponse.json(
+        { error: "Too many rows (max 500 data rows)" },
+        { status: 400 },
+      );
+    }
 
     if (lines.length < 2) {
       return NextResponse.json(

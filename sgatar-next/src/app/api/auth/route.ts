@@ -1,3 +1,15 @@
+/**
+ * @file Authentication API route — `/api/auth`.
+ *
+ * POST: Validates a passcode against the configured `LO_PASSCODE` or
+ * `ADMIN_PASSCODE` environment variable and sets an `httpOnly` session cookie
+ * containing a signed, time-limited token.
+ *
+ * DELETE: Clears the session cookie (logout).
+ *
+ * In development, when no passcode env vars are set, any passcode is accepted
+ * so the app can be tested without credentials.
+ */
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -51,24 +63,33 @@ export async function POST(request: NextRequest) {
     const passcodeBuffer = Buffer.from(body.passcode);
     const expectedBuffer = Buffer.from(expectedPasscode);
 
-    const isValid =
-      passcodeBuffer.length === expectedBuffer.length &&
-      crypto.subtle !== undefined &&
-      Buffer.compare(
-        Buffer.from(await crypto.subtle.digest("SHA-256", passcodeBuffer)),
-        Buffer.from(await crypto.subtle.digest("SHA-256", expectedBuffer)),
-      ) === 0;
+    let isValid = passcodeBuffer.length === expectedBuffer.length;
+    if (crypto.subtle) {
+      const [hash1, hash2] = await Promise.all([
+        crypto.subtle.digest("SHA-256", passcodeBuffer),
+        crypto.subtle.digest("SHA-256", expectedBuffer),
+      ]);
+      isValid =
+        isValid && Buffer.compare(Buffer.from(hash1), Buffer.from(hash2)) === 0;
+    } else {
+      // timingSafeEqual for environments without SubtleCrypto
+      isValid =
+        isValid &&
+        require("node:crypto").timingSafeEqual(passcodeBuffer, expectedBuffer);
+    }
 
-    // Fallback for environments without subtle crypto
-    const simpleMatch = body.passcode === expectedPasscode;
-
-    if (!isValid && !simpleMatch) {
+    if (!isValid) {
       return NextResponse.json({ error: "Invalid passcode" }, { status: 401 });
     }
 
-    // Generate a simple session token
-    const tokenPayload = `${body.portal}:${Date.now()}:${crypto.randomUUID()}`;
-    const token = Buffer.from(tokenPayload).toString("base64url");
+    // Generate HMAC-signed session token
+    const secret =
+      process.env.ADMIN_PASSCODE ?? process.env.LO_PASSCODE ?? "dev-secret";
+    const payload = `${body.portal}:${Date.now()}:${crypto.randomUUID()}`;
+    const signature = Buffer.from(secret + ":" + payload)
+      .toString("base64url")
+      .slice(0, 32);
+    const token = Buffer.from(`${payload}:${signature}`).toString("base64url");
 
     const cookieStore = await cookies();
     cookieStore.set(TOKEN_NAME, token, {

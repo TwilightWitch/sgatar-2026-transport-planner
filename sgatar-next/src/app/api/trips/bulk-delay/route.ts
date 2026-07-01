@@ -1,9 +1,24 @@
+/**
+ * @file Bulk delay API route — `POST /api/trips/bulk-delay`.
+ *
+ * Shifts the scheduled departure time of all non-completed trips on a given
+ * route forward by a specified number of minutes, and marks their status as
+ * `"delayed"`.  When `clearDelay: true` is passed instead, all delayed trips
+ * on the route have their status reset to `"scheduled"` without touching times.
+ *
+ * When `DATABASE_URL` is configured the update is applied directly to the
+ * `routes` table (so the base schedule shifts) and the `active_trips` statuses
+ * are updated.  In no-DB mode the in-memory store is updated instead.
+ *
+ * Protected by the proxy authentication layer (admin token required).
+ */
 import { getTrips, updateTrip } from "@/lib/tripStore";
 import { NextRequest, NextResponse } from "next/server";
 
 interface BulkDelayBody {
   routeId: string;
-  delayMinutes: number;
+  delayMinutes?: number;
+  clearDelay?: boolean;
 }
 
 function addMinutesToTime(time: string, minutes: number): string {
@@ -29,6 +44,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Clear delay mode: reset status only, no time change ───────────────
+    if (body.clearDelay) {
+      if (process.env.DATABASE_URL) {
+        try {
+          const { db } = await import("@/db");
+          const { activeTrips } = await import("@/db/schema");
+          const { eq, and, sql } = await import("drizzle-orm");
+
+          const updated = await db
+            .update(activeTrips)
+            .set({ status: "scheduled" })
+            .where(
+              and(
+                eq(activeTrips.routeId, body.routeId),
+                sql`${activeTrips.status} = 'delayed'`,
+              ),
+            )
+            .returning();
+
+          return NextResponse.json({
+            message: `Cleared delay on ${updated.length} trip${updated.length === 1 ? "" : "s"}`,
+            affectedTrips: updated.length,
+          });
+        } catch (error) {
+          console.error("POST bulk-delay clear DB error, falling back:", error);
+        }
+      }
+
+      // In-memory fallback
+      const storeTrips = getTrips();
+      const affected = storeTrips.filter(
+        (t) => t.routeId === body.routeId && t.status === "delayed",
+      );
+      for (const trip of affected) {
+        updateTrip(trip.id, { status: "scheduled" });
+      }
+      return NextResponse.json({
+        message: `Cleared delay on ${affected.length} trip${affected.length === 1 ? "" : "s"}`,
+        affectedTrips: affected.length,
+      });
+    }
+
+    // ── Apply delay mode ──────────────────────────────────────────────────
     if (
       typeof body.delayMinutes !== "number" ||
       body.delayMinutes <= 0 ||
@@ -40,6 +98,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Apply delay mode ──────────────────────────────────────────────────
     // If DB is configured, use it
     if (process.env.DATABASE_URL) {
       try {
@@ -66,7 +125,7 @@ export async function POST(request: NextRequest) {
           .returning();
 
         return NextResponse.json({
-          message: `Shifted ${updated.length} trips by ${body.delayMinutes} minutes`,
+          message: `Delayed ${updated.length} trip${updated.length === 1 ? "" : "s"} by ${body.delayMinutes} minutes`,
           affectedTrips: updated.length,
         });
       } catch (error) {
@@ -95,7 +154,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: `Shifted ${affected.length} trips by ${body.delayMinutes} minutes`,
+      message: `Delayed ${affected.length} trip${affected.length === 1 ? "" : "s"} by ${body.delayMinutes} minutes`,
       affectedTrips: affected.length,
     });
   } catch (error) {

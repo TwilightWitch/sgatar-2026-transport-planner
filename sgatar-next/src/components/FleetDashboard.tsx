@@ -1,3 +1,16 @@
+/**
+ * @file FleetDashboard component.
+ *
+ * Displays a real-time overview of the entire active bus fleet for admins:
+ * - A flashing SOS alert banner listing any buses that have raised an
+ *   emergency, including the LO's free-text description.
+ * - Summary stats (active, en-route, completed, SOS counts).
+ * - A full fleet table with per-bus status badges, capacity fractions, and
+ *   ad-hoc / SOS flags.
+ *
+ * Receives the `trips` array directly from the parent admin page (which owns
+ * the React Query subscription) so it re-renders on every poll cycle.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
@@ -129,6 +142,18 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                 scope="col"
                 className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
               >
+                Day
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                Dep
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
                 Bus
               </th>
               <th
@@ -163,6 +188,12 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                 key={trip.id}
                 className={`${trip.isSos ? "bg-red-50 dark:bg-red-950/30" : "bg-white dark:bg-gray-900"}`}
               >
+                <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  {trip.conferenceDay}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs font-mono text-gray-700 dark:text-gray-300">
+                  {trip.scheduledDeparture}
+                </td>
                 <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
                   {trip.busIdentifier}
                 </td>
@@ -184,6 +215,11 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400">
                       <AlertTriangle className="h-3 w-3" aria-hidden="true" />{" "}
                       SOS
+                    </span>
+                  )}
+                  {trip.currentPax >= trip.maxCapacity && (
+                    <span className="ml-1 inline-flex rounded bg-red-100 px-1.5 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900 dark:text-red-300">
+                      Full
                     </span>
                   )}
                   {trip.isAdhoc && (

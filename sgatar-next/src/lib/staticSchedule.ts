@@ -1,6 +1,13 @@
 /**
- * Static schedule data derived from the original SGATAR 2026 Transport Planner.
- * Used as a fallback when the live database is unavailable.
+ * @file Static schedule fallback data.
+ *
+ * Contains the full pre-planned SGATAR 2026 four-day transport timetable
+ * derived from the original vanilla-JS planner spreadsheet.  The data is
+ * transformed by {@link getStaticTrips} into the {@link TripWithRoute} shape
+ * consumed by every UI component and API handler.
+ *
+ * This module is the single source of truth when `DATABASE_URL` is not set.
+ * It is also used to initialise the {@link module:tripStore} on first access.
  */
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";

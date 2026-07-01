@@ -4,7 +4,8 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
+export default [
+  { ignores: [".next/**", "node_modules/**", "coverage/**"] },
   // TypeScript rules
   ...tseslint.configs.recommendedTypeChecked,
 
@@ -61,9 +62,4 @@ export default tseslint.config(
       "jsx-a11y/no-autofocus": "off",
     },
   },
-
-  // Ignore build outputs and config
-  {
-    ignores: [".next/**", "node_modules/**"],
-  },
-);
+];

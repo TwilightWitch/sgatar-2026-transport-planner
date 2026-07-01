@@ -10,6 +10,9 @@ out/
 # production
 build/
 
+# test coverage (generated — do not commit or analyse)
+coverage/
+
 # misc
 .DS_Store
 *.pem

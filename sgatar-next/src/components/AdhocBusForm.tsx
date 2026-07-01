@@ -1,3 +1,13 @@
+/**
+ * @file AdhocBusForm component.
+ *
+ * Admin panel collapsible form for creating an unplanned "ghost bus" trip on
+ * an existing route.  The created trip is tagged `isAdhoc: true` so it is
+ * visually distinguished in the fleet dashboard and FIDS board.
+ *
+ * Sends a `POST /api/trips/adhoc` request and invokes `onCreated` on success
+ * so the parent can refresh the trip list via React Query invalidation.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";

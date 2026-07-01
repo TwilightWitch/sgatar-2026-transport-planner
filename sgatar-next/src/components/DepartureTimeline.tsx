@@ -1,3 +1,17 @@
+/**
+ * @file DepartureTimeline component.
+ *
+ * Delegate portal section listing the next 10 upcoming departures in
+ * chronological order.  Each row shows:
+ * - Scheduled departure time (12-hour AM/PM format).
+ * - Service name and pickup → dropoff route.
+ * - Live status badge (Scheduled / Boarding / Delayed).
+ * - Current pax vs capacity, with a "Full" badge when the bus is at capacity.
+ *
+ * Only trips with status `scheduled`, `boarding`, or `delayed` are shown.
+ * The list is re-rendered every time the parent page receives a fresh poll
+ * from {@link useActiveTrips}.
+ */
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
@@ -8,7 +22,7 @@ interface DepartureTimelineProps {
   trips: TripWithRoute[];
 }
 
-export function DepartureTimeline({ trips }: DepartureTimelineProps) {
+export function DepartureTimeline({ trips }: Readonly<DepartureTimelineProps>) {
   const { t } = useI18n();
 
   const upcoming = trips
@@ -88,9 +102,18 @@ export function DepartureTimeline({ trips }: DepartureTimelineProps) {
               >
                 {t[trip.status === "en_route" ? "enRoute" : trip.status]}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {trip.currentPax}/{trip.maxCapacity}
-              </span>
+              {trip.currentPax >= trip.maxCapacity ? (
+                <span
+                  className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900 dark:text-red-300"
+                  aria-label="Bus full"
+                >
+                  Full
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {trip.currentPax}/{trip.maxCapacity}
+                </span>
+              )}
             </div>
           </li>
         ))}

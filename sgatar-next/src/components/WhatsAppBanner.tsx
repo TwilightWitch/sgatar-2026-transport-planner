@@ -1,3 +1,14 @@
+/**
+ * @file WhatsAppBanner component.
+ *
+ * Delegate portal call-to-action that deep-links into the SGATAR 2026
+ * WhatsApp group for live transport updates.  The invite URL is injected at
+ * build time via the `NEXT_PUBLIC_WHATSAPP_INVITE_URL` environment variable
+ * (must be in `sgatar-next/.env` or `sgatar-next/.env.local`).
+ *
+ * Falls back to `"#"` when the variable is absent so the banner is still
+ * rendered without breaking the page.
+ */
 "use client";
 
 import { useI18n } from "@/lib/i18n/provider";
