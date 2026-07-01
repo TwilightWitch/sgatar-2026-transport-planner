@@ -1,0 +1,33 @@
+# Dependencies and build artifacts — never needed in the image
+node_modules
+.next
+out
+build
+
+# Environment files — secrets must never be baked into the image
+.env
+.env.*
+!.env.example
+
+# Version control
+.git
+.gitignore
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Test and tooling outputs
+coverage
+*.tsbuildinfo
+*.log
+npm-debug.log*
+
+# Documentation
+README.md
+*.md
+
+# Local dev config
+sonar-project.properties

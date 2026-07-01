@@ -1,0 +1,33 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended-type-checked",
+    "plugin:jsx-a11y/strict"
+  ],
+  "plugins": ["@typescript-eslint", "jsx-a11y"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_" }
+    ],
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": [
+      "error",
+      { "checksVoidReturn": { "attributes": false } }
+    ],
+    "@typescript-eslint/strict-boolean-expressions": "off",
+    "@typescript-eslint/no-confusing-void-expression": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
+    "@typescript-eslint/no-unnecessary-condition": "warn",
+    "@typescript-eslint/require-await": "warn",
+    "curly": "off",
+    "jsx-a11y/anchor-is-valid": "error",
+    "jsx-a11y/no-autofocus": "error",
+    "jsx-a11y/label-has-associated-control": "error"
+  }
+}
