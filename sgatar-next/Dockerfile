@@ -38,8 +38,6 @@ WORKDIR /app
 COPY --chown=app:app --from=builder /app/.next/standalone ./
 # Copy the static assets (CSS, JS chunks, images)
 COPY --chown=app:app --from=builder /app/.next/static ./.next/static
-# Copy the public directory (favicons, og images, etc.)
-COPY --chown=app:app --from=builder /app/public ./public
 
 # Switch to the non-root user required by Airbase
 USER app
