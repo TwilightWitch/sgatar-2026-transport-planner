@@ -2,7 +2,10 @@
 
 import { AdhocBusForm } from "@/components/AdhocBusForm";
 import { BulkShiftSchedule } from "@/components/BulkShiftSchedule";
+import { CsvUpload } from "@/components/CsvUpload";
 import { FleetDashboard } from "@/components/FleetDashboard";
+import { ScheduleEditor } from "@/components/ScheduleEditor";
+import { SimulatorPanel } from "@/components/SimulatorPanel";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -27,10 +30,10 @@ export default function AdminPage() {
 
       {error && (
         <div
-          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
           role="alert"
         >
-          Failed to connect to dispatch system. Retrying...
+          Running in offline mode — edits are stored in memory.
         </div>
       )}
 
@@ -38,10 +41,32 @@ export default function AdminPage() {
         <>
           <FleetDashboard trips={trips} />
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <AdhocBusForm trips={trips} onCreated={handleRefresh} />
             <BulkShiftSchedule trips={trips} onShifted={handleRefresh} />
+            <CsvUpload onUploaded={handleRefresh} />
           </div>
+
+          <details className="group">
+            <summary className="flex cursor-pointer items-center rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+              <span>Schedule Editor</span>
+              <span className="ml-2 text-xs font-normal text-gray-500">
+                ({trips.length} trips)
+              </span>
+            </summary>
+            <div className="mt-3">
+              <ScheduleEditor trips={trips} onUpdated={handleRefresh} />
+            </div>
+          </details>
+
+          <details className="group">
+            <summary className="cursor-pointer rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+              Demand Simulator
+            </summary>
+            <div className="mt-3">
+              <SimulatorPanel trips={trips} />
+            </div>
+          </details>
         </>
       )}
     </div>

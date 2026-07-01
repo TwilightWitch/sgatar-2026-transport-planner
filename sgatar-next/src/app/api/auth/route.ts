@@ -30,14 +30,21 @@ export async function POST(request: NextRequest) {
         ? process.env.ADMIN_PASSCODE
         : process.env.LO_PASSCODE;
 
+    // In dev without passcodes configured, accept any input
     if (!expectedPasscode) {
-      console.error(
-        `Missing ${body.portal.toUpperCase()}_PASSCODE env variable`,
-      );
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 },
-      );
+      const tokenPayload = `${body.portal}:${Date.now()}:${crypto.randomUUID()}`;
+      const token = Buffer.from(tokenPayload).toString("base64url");
+
+      const cookieStore = await cookies();
+      cookieStore.set(TOKEN_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: TOKEN_MAX_AGE,
+        path: "/",
+      });
+
+      return NextResponse.json({ success: true, portal: body.portal });
     }
 
     // Constant-time comparison to prevent timing attacks

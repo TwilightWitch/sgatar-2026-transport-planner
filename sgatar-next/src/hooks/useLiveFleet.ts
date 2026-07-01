@@ -20,6 +20,7 @@ export interface TripWithRoute {
   actualArrivalTime: string | null;
   operationalNote: string | null;
   isSos: boolean;
+  sosMessage: string | null;
   isAdhoc: boolean;
   conferenceDay: string;
   serviceName: string;
@@ -28,6 +29,9 @@ export interface TripWithRoute {
   dropoffLocation: string;
   scheduledDeparture: string;
   scheduledArrival: string;
+  driverName: string | null;
+  driverPhone: string | null;
+  plateNumber: string | null;
 }
 
 interface HeadcountUpdate {
@@ -35,6 +39,7 @@ interface HeadcountUpdate {
   currentPax: number;
   status?: TripWithRoute["status"];
   isSos?: boolean;
+  sosMessage?: string | null;
 }
 
 interface OfflineQueueEntry {
@@ -135,14 +140,15 @@ export function useUpdateHeadcount() {
   }, [queryClient]);
 
   useEffect(() => {
-    globalThis.addEventListener("online", handleOnline);
+    const onlineHandler = () => {
+      void handleOnline();
+    };
+    globalThis.addEventListener("online", onlineHandler);
     // Attempt sync on mount in case we're already online with queued items
     if (navigator.onLine) {
-      handleOnline().catch(() => {
-        // Will retry on next online event
-      });
+      void handleOnline();
     }
-    return () => globalThis.removeEventListener("online", handleOnline);
+    return () => globalThis.removeEventListener("online", onlineHandler);
   }, [handleOnline]);
 
   return useMutation<

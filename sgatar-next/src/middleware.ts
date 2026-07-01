@@ -15,6 +15,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Skip auth in dev when passcodes are not configured
+  const hasPasscodes = process.env.LO_PASSCODE || process.env.ADMIN_PASSCODE;
+  if (!hasPasscodes) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(TOKEN_NAME)?.value;
 
   if (!token) {

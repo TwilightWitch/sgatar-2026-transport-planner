@@ -8,8 +8,20 @@ Live operational transport management platform for the SGATAR 2026 conference. B
 # Install dependencies
 npm install
 
+# Start development server (no database required!)
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) for the Delegate view.
+
+> **No database needed for local dev.** When `DATABASE_URL` is not set, the app runs fully off the preloaded 4-day SGATAR schedule. All portals are accessible without login when passcodes are not configured.
+
+### With a live database (optional)
+
+```bash
 # Copy environment variables and configure
 cp .env.example .env.local
+# Edit .env.local with your Neon connection string
 
 # Push database schema to Neon
 npm run db:push
@@ -21,8 +33,6 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the Delegate view.
-
 ---
 
 ## Portal Access
@@ -33,6 +43,10 @@ Open [http://localhost:3000](http://localhost:3000) for the Delegate view.
 | Liaison Officer      | `/lo`      | Event passcode required    |
 | Admin / Control Room | `/admin`   | Admin passcode required    |
 | Signage / FIDS       | `/display` | No authentication required |
+
+All portals have a navigation bar in the header for quick switching between views.
+
+**Dev mode:** When `LO_PASSCODE` and `ADMIN_PASSCODE` are not set in `.env.local`, authentication is bypassed and all portals are freely accessible.
 
 ---
 
@@ -99,9 +113,10 @@ The admin portal at `/admin` provides full fleet visibility and operational cont
 
 ### Getting access
 
-1. Navigate to `/admin` (redirects to `/login`).
+1. Navigate to `/admin` (redirects to `/login` in production).
 2. Select **Admin / Control Room** from the portal dropdown.
 3. Enter the admin passcode.
+4. In dev mode (no passcodes configured), just click "Admin" in the nav bar.
 
 ### Fleet Dashboard
 
@@ -124,7 +139,25 @@ When events run late or traffic delays all buses on a route:
 1. Open the **Bulk Shift Schedule** panel.
 2. Select the affected route.
 3. Enter delay in minutes (1–180).
-4. Click **Apply Delay** — all non-completed trips on that route are marked `delayed` and the scheduled departure is shifted forward.
+4. Click **Apply Delay** — all non-completed trips on that route are marked "Delayed" and the scheduled departure is shifted forward.
+
+### Schedule Editor
+
+An inline-editable table of the full timetable:
+
+- Click any cell (service name, bus ID, pickup, dropoff, departure, arrival) to edit inline.
+- Change trip status via the dropdown.
+- Delete trips with the trash icon.
+- Filter by conference day using the dropdown.
+- Changes persist in memory for the life of the server (reset on restart). With a database connected, edits persist permanently.
+
+### Demand Simulator & Monte Carlo Analysis
+
+Ported from the original planning tools:
+
+- **Single Simulation** — Select a service, set guest count, buffer %, variability %, and seed. Click "Run Simulation" to see per-bus load distribution.
+- **Monte Carlo Analysis** — Run N iterations (default 1000) to estimate the probability of overload. Shows fleet-size impact table (−1 bus / current / +1 bus).
+- **Re-randomise** — Click to randomise the seed for a fresh distribution.
 
 ---
 
@@ -153,25 +186,31 @@ src/
 │   ├── lo/             # Liaison Officer portal
 │   └── login/          # Authentication page
 ├── components/         # Shared UI components
+│   ├── PortalNav.tsx         # Inter-portal navigation
+│   ├── ScheduleEditor.tsx    # Inline trip editor
+│   └── SimulatorPanel.tsx    # Monte Carlo & demand simulator
 ├── db/                 # Drizzle schema, client, seed
 ├── hooks/              # React Query hooks (useLiveFleet)
 └── lib/
-    ├── i18n/           # Internationalization (13 languages)
-    └── simulationEngine.ts  # Ported Monte Carlo simulation
+    ├── i18n/               # Internationalization (13 languages)
+    ├── simulationEngine.ts # Ported Monte Carlo simulation
+    ├── staticSchedule.ts   # Fallback static timetable (67 trips)
+    └── tripStore.ts        # In-memory mutable trip store
 ```
 
 ---
 
 ## API Reference
 
-| Method | Endpoint                | Description                               |
-| ------ | ----------------------- | ----------------------------------------- |
-| GET    | `/api/trips`            | Fetch all active trips joined with routes |
-| PATCH  | `/api/trips/[id]`       | Update trip status, headcount, SOS flag   |
-| POST   | `/api/trips/adhoc`      | Create an ad-hoc ghost bus trip           |
-| POST   | `/api/trips/bulk-delay` | Shift all trips on a route by N minutes   |
-| POST   | `/api/auth`             | Authenticate with event passcode          |
-| DELETE | `/api/auth`             | Log out (clear session cookie)            |
+| Method | Endpoint                | Description                                 |
+| ------ | ----------------------- | ------------------------------------------- |
+| GET    | `/api/trips`            | Fetch all active trips joined with routes   |
+| PATCH  | `/api/trips/[id]`       | Update trip fields (status, pax, SOS, etc.) |
+| DELETE | `/api/trips/[id]`       | Delete a trip                               |
+| POST   | `/api/trips/adhoc`      | Create an ad-hoc ghost bus trip             |
+| POST   | `/api/trips/bulk-delay` | Shift all trips on a route by N minutes     |
+| POST   | `/api/auth`             | Authenticate with event passcode            |
+| DELETE | `/api/auth`             | Log out (clear session cookie)              |
 
 ---
 
@@ -186,6 +225,47 @@ src/
 | `npm run db:generate` | Generate Drizzle migrations   |
 | `npm run db:push`     | Push schema to database       |
 | `npm run db:seed`     | Seed routes and initial trips |
+
+---
+
+## Dev Testing Guide
+
+### Running without a database
+
+```bash
+npm install
+npm run dev
+```
+
+The app starts with the full 4-day SGATAR schedule (67 trips) loaded from static data. Navigate freely between all portals using the header nav. Edits made in the admin portal persist in server memory until you restart the dev server.
+
+### Testing the admin portal
+
+1. Open http://localhost:3000/admin
+2. View the Fleet Dashboard with live stats
+3. Try **Add Ad-Hoc Bus** (pick any route from the dropdown)
+4. Try **Bulk Shift Schedule** (select a route, enter 5 minutes)
+5. Scroll to **Schedule Editor** — click cells to edit, change statuses, delete rows
+6. Scroll to **Demand Simulator** — select a service, click "Run Simulation" or "Monte Carlo Analysis"
+
+### Testing the LO portal
+
+1. Open http://localhost:3000/lo
+2. Use the +/- buttons to adjust headcount on each trip
+3. Tap the SOS button — it should appear in the admin dashboard immediately
+
+### Testing the delegate view
+
+1. Open http://localhost:3000
+2. Verify capacity widget and departure timeline display correctly
+3. Switch languages using the top-right selector
+4. Check the WhatsApp banner link
+
+### Type checking
+
+```bash
+npx tsc --noEmit
+```
 
 ---
 

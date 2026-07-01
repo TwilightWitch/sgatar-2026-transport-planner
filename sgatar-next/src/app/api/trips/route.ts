@@ -1,4 +1,4 @@
-import { getStaticTrips } from "@/lib/staticSchedule";
+import { getTrips } from "@/lib/tripStore";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -40,6 +40,6 @@ export async function GET() {
     }
   }
 
-  // Fallback: return preloaded static schedule
-  return NextResponse.json(getStaticTrips());
+  // Fallback: return in-memory mutable schedule
+  return NextResponse.json(getTrips());
 }

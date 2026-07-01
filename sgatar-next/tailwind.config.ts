@@ -11,15 +11,24 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          900: "#1e3a5f",
+          50: "#eef2f7",
+          100: "#d4dde8",
+          200: "#a9bbcf",
+          500: "#1a3a5c",
+          600: "#142d4a",
+          700: "#0f2239",
+          800: "#0a1827",
+          900: "#0c1f36",
+        },
+        accent: {
+          50: "#fef2f2",
+          100: "#fee2e2",
+          500: "#c8102e",
+          600: "#a50d24",
+          700: "#82091a",
         },
         sos: {
-          DEFAULT: "#dc2626",
+          DEFAULT: "#c8102e",
           pulse: "#fecaca",
         },
       },

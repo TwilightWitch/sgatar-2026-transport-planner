@@ -30,7 +30,7 @@ export function BulkShiftSchedule({
 
     setSubmitting(true);
     setResult(null);
-    fetch("/api/trips/bulk-delay", {
+    void fetch("/api/trips/bulk-delay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

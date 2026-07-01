@@ -2,9 +2,9 @@
 
 import { Bus, Lock } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const redirect = searchParams.get("redirect") ?? "/lo";
@@ -33,7 +33,7 @@ export default function LoginPage() {
     })
       .then(async (res) => {
         if (res.ok) {
-          router.push(redirect as "/lo" | "/admin");
+          router.push(redirect);
         } else {
           const data = (await res.json()) as { error: string };
           setError(data.error);
@@ -133,5 +133,19 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

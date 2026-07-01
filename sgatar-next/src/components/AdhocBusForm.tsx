@@ -32,7 +32,7 @@ export function AdhocBusForm({
     if (!routeId || !busIdentifier) return;
 
     setSubmitting(true);
-    fetch("/api/trips/adhoc", {
+    void fetch("/api/trips/adhoc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,0 +1,12 @@
+{
+  "framework": "container",
+  "handle": "jw-iras/sgatar26transportplanner",
+  "port": 8080,
+  "instanceType": "b.small",
+  "healthCheck": {
+    "path": "/api/health",
+    "interval": 30,
+    "timeout": 5,
+    "startPeriod": 10
+  }
+}

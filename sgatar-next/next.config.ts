@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    typedRoutes: true,
-  },
+  output: "standalone",
+  typedRoutes: false,
 };
 
 export default nextConfig;

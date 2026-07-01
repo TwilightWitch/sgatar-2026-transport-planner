@@ -1,20 +1,41 @@
 "use client";
 
-import { AlertTriangle, Bus, CheckCircle, Clock } from "lucide-react";
-import { useI18n } from "@/lib/i18n/provider";
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
+import { useI18n } from "@/lib/i18n/provider";
+import { AlertTriangle, Bus, CheckCircle, Clock } from "lucide-react";
 
 interface FleetDashboardProps {
   trips: TripWithRoute[];
 }
 
-export function FleetDashboard({ trips }: FleetDashboardProps) {
+const STATUS_STYLES: Record<string, string> = {
+  en_route:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  boarding: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  delayed: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  completed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  en_route: "En Route",
+  boarding: "Boarding",
+  delayed: "Delayed",
+  scheduled: "Scheduled",
+  completed: "Completed",
+};
+
+export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
   const { t } = useI18n();
 
   const sosTrips = trips.filter((trip) => trip.isSos);
   const activeTrips = trips.filter((trip) => trip.status !== "completed");
-  const enRouteCount = trips.filter((trip) => trip.status === "en_route").length;
-  const completedCount = trips.filter((trip) => trip.status === "completed").length;
+  const enRouteCount = trips.filter(
+    (trip) => trip.status === "en_route",
+  ).length;
+  const completedCount = trips.filter(
+    (trip) => trip.status === "completed",
+  ).length;
 
   return (
     <section aria-label={t.fleetDashboard}>
@@ -26,15 +47,28 @@ export function FleetDashboard({ trips }: FleetDashboardProps) {
           aria-live="assertive"
         >
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
+            <AlertTriangle
+              className="h-6 w-6 text-red-600 dark:text-red-400"
+              aria-hidden="true"
+            />
             <div>
               <h3 className="font-bold text-red-800 dark:text-red-200">
-                {sosTrips.length} Active SOS Flag{sosTrips.length > 1 ? "s" : ""}
+                {sosTrips.length} Active SOS Flag
+                {sosTrips.length > 1 ? "s" : ""}
               </h3>
               <ul className="mt-1 space-y-1">
                 {sosTrips.map((trip) => (
-                  <li key={trip.id} className="text-sm text-red-700 dark:text-red-300">
-                    {trip.busIdentifier} — {trip.serviceName} ({trip.pickupLocation})
+                  <li
+                    key={trip.id}
+                    className="text-sm text-red-700 dark:text-red-300"
+                  >
+                    <strong>{trip.busIdentifier}</strong> — {trip.serviceName} (
+                    {trip.pickupLocation})
+                    {trip.sosMessage && (
+                      <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs dark:bg-red-900">
+                        &ldquo;{trip.sosMessage}&rdquo;
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -91,11 +125,36 @@ export function FleetDashboard({ trips }: FleetDashboardProps) {
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th scope="col" className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Bus</th>
-              <th scope="col" className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Service</th>
-              <th scope="col" className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{t.status}</th>
-              <th scope="col" className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{t.capacity}</th>
-              <th scope="col" className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">Flags</th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                Bus
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                Service
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                {t.status}
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                {t.capacity}
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                Flags
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -111,16 +170,10 @@ export function FleetDashboard({ trips }: FleetDashboardProps) {
                   {trip.serviceName}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                    trip.status === "en_route"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                      : trip.status === "boarding"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : trip.status === "delayed"
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                  }`}>
-                    {trip.status.replace("_", " ")}
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[trip.status] ?? STATUS_STYLES.scheduled}`}
+                  >
+                    {STATUS_LABELS[trip.status] ?? trip.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
@@ -129,7 +182,8 @@ export function FleetDashboard({ trips }: FleetDashboardProps) {
                 <td className="px-4 py-3">
                   {trip.isSos && (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400">
-                      <AlertTriangle className="h-3 w-3" aria-hidden="true" /> SOS
+                      <AlertTriangle className="h-3 w-3" aria-hidden="true" />{" "}
+                      SOS
                     </span>
                   )}
                   {trip.isAdhoc && (
