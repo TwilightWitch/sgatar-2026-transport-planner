@@ -1,0 +1,132 @@
+/**
+ * Static schedule data derived from the original SGATAR 2026 Transport Planner.
+ * Used as a fallback when the live database is unavailable.
+ */
+
+import type { TripWithRoute } from "@/hooks/useLiveFleet";
+
+interface RawRow {
+  day: string;
+  svc: string;
+  arr: string;
+  id: string | number;
+  from: string;
+  to: string;
+  dep: string;
+  arv: string;
+  pax: number;
+  cap: number;
+  note: string;
+  lo: number;
+}
+
+const RAW_SCHEDULE: RawRow[] = [
+  { day:"7 Sep (Mon)", svc:"Hotels \u2192 MBS (Welcome Reception)", arr:"17:00", id:1, from:"Rendezvous", to:"MBS", dep:"16:30", arv:"16:50", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"Hotels \u2192 MBS (Welcome Reception)", arr:"17:00", id:2, from:"Parkroyal MB", to:"MBS", dep:"16:30", arv:"16:50", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"Hotels \u2192 MBS (Welcome Reception)", arr:"17:00", id:3, from:"Rendezvous", to:"MBS", dep:"16:35", arv:"16:55", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"Hotels \u2192 MBS (Welcome Reception)", arr:"17:00", id:4, from:"Parkroyal MB", to:"MBS", dep:"16:35", arv:"16:55", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"Hotels \u2192 MBS (Welcome Reception)", arr:"17:00", id:5, from:"Rendezvous", to:"MBS", dep:"16:40", arv:"17:00", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"MBS \u2192 Hotels", arr:"\u2014", id:1, from:"MBS", to:"Rendezvous", dep:"21:00", arv:"21:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"MBS \u2192 Hotels", arr:"\u2014", id:2, from:"MBS", to:"Parkroyal MB", dep:"21:00", arv:"21:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"MBS \u2192 Hotels", arr:"\u2014", id:3, from:"MBS", to:"Rendezvous", dep:"21:05", arv:"21:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"MBS \u2192 Hotels", arr:"\u2014", id:4, from:"MBS", to:"Parkroyal MB", dep:"21:05", arv:"21:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"7 Sep (Mon)", svc:"MBS \u2192 Hotels", arr:"\u2014", id:5, from:"MBS", to:"Rendezvous", dep:"21:10", arv:"21:30", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:1, from:"Rendezvous", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:2, from:"Parkroyal MB", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:3, from:"Rendezvous", to:"MBS", dep:"08:10", arv:"08:30", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:4, from:"Parkroyal MB", to:"MBS", dep:"08:10", arv:"08:30", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:5, from:"Rendezvous", to:"MBS", dep:"08:15", arv:"08:35", pax:38, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:1, from:"MBS", to:"Straits Kitchen", dep:"18:05", arv:"18:30", pax:27, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:2, from:"MBS", to:"Straits Kitchen", dep:"18:05", arv:"18:30", pax:27, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:3, from:"MBS", to:"Straits Kitchen", dep:"18:10", arv:"18:35", pax:27, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:4, from:"MBS", to:"Straits Kitchen", dep:"18:10", arv:"18:35", pax:27, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:5, from:"MBS", to:"Straits Kitchen", dep:"18:15", arv:"18:40", pax:27, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:"6 (HOD)", from:"MBS", to:"Straits Kitchen", dep:"18:15", arv:"18:40", pax:27, cap:40, note:"HOD bus", lo:1 },
+  { day:"8 Sep (Tue)", svc:"MBS \u2192 Straits Kitchen (Opening Dinner)", arr:"18:45", id:7, from:"MBS", to:"Straits Kitchen", dep:"18:20", arv:"18:45", pax:28, cap:40, note:"Latecomers", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:1, from:"Straits Kitchen", to:"Rendezvous", dep:"21:00", arv:"21:25", pax:32, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:2, from:"Straits Kitchen", to:"Parkroyal MB", dep:"21:00", arv:"21:25", pax:32, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:3, from:"Straits Kitchen", to:"MBS", dep:"21:05", arv:"21:30", pax:32, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:4, from:"Straits Kitchen", to:"MRT (excl. Orchard)", dep:"21:05", arv:"TBC", pax:0, cap:40, note:"Orchard MRT is 3-min walk from Straits Kitchen", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:5, from:"Straits Kitchen", to:"Rendezvous", dep:"21:10", arv:"21:35", pax:31, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:6, from:"Straits Kitchen", to:"Parkroyal MB", dep:"21:10", arv:"21:35", pax:31, cap:40, note:"", lo:1 },
+  { day:"8 Sep (Tue)", svc:"Straits Kitchen \u2192 Hotels", arr:"\u2014", id:7, from:"Straits Kitchen", to:"MBS", dep:"21:15", arv:"21:40", pax:32, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:1, from:"Rendezvous", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:2, from:"Parkroyal MB", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:3, from:"Rendezvous", to:"MBS", dep:"08:05", arv:"08:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:4, from:"Parkroyal MB", to:"MBS", dep:"08:05", arv:"08:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45", id:5, from:"Rendezvous", to:"MBS", dep:"08:15", arv:"08:35", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Hotels (Afternoon)", arr:"16:30", id:1, from:"MBS", to:"Rendezvous", dep:"16:00", arv:"16:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Hotels (Afternoon)", arr:"16:30", id:2, from:"MBS", to:"Parkroyal MB", dep:"16:00", arv:"16:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Hotels (Afternoon)", arr:"16:30", id:3, from:"MBS", to:"Rendezvous", dep:"16:05", arv:"16:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Hotels (Afternoon)", arr:"16:30", id:4, from:"MBS", to:"Parkroyal MB", dep:"16:05", arv:"16:25", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Hotels (Afternoon)", arr:"16:30", id:5, from:"MBS", to:"Rendezvous", dep:"16:10", arv:"16:30", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 Night Safari", arr:"18:15", id:1, from:"Rendezvous", to:"Night Safari", dep:"17:30", arv:"18:10", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 Night Safari", arr:"18:15", id:2, from:"Parkroyal MB", to:"Night Safari", dep:"17:30", arv:"18:10", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 Night Safari", arr:"18:15", id:3, from:"Rendezvous", to:"Night Safari", dep:"17:35", arv:"18:10", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 Night Safari", arr:"18:15", id:4, from:"Parkroyal MB", to:"Night Safari", dep:"17:35", arv:"18:15", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Hotels \u2192 Night Safari", arr:"18:15", id:5, from:"Rendezvous", to:"Night Safari", dep:"17:40", arv:"18:15", pax:38, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Night Safari", arr:"18:15", id:1, from:"MBS", to:"Night Safari", dep:"17:30", arv:"18:10", pax:0, cap:40, note:"Standby", lo:1 },
+  { day:"9 Sep (Wed)", svc:"MBS \u2192 Night Safari", arr:"18:15", id:2, from:"MBS", to:"Night Safari", dep:"17:35", arv:"18:15", pax:0, cap:40, note:"Standby", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:1, from:"Night Safari", to:"Rendezvous", dep:"22:15", arv:"22:55", pax:32, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:2, from:"Night Safari", to:"Parkroyal MB", dep:"22:15", arv:"22:55", pax:32, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:5, from:"Night Safari", to:"MBS", dep:"22:15", arv:"22:55", pax:32, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:3, from:"Night Safari", to:"Rendezvous", dep:"22:20", arv:"23:00", pax:32, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:4, from:"Night Safari", to:"Parkroyal MB", dep:"22:20", arv:"23:00", pax:31, cap:40, note:"", lo:1 },
+  { day:"9 Sep (Wed)", svc:"Night Safari \u2192 Hotels", arr:"\u2014", id:6, from:"Night Safari", to:"MBS", dep:"22:20", arv:"23:00", pax:31, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45/09:15", id:1, from:"Rendezvous", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45/09:15", id:2, from:"Parkroyal MB", to:"MBS", dep:"08:00", arv:"08:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45/09:15", id:3, from:"Rendezvous", to:"MBS", dep:"08:25", arv:"08:55", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45/09:15", id:4, from:"Parkroyal MB", to:"MBS", dep:"08:25", arv:"08:55", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (Morning)", arr:"08:45/09:15", id:5, from:"Rendezvous", to:"MBS", dep:"08:40", arv:"09:00", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Shuttle Loop \u2014 Hotels \u2194 MBS (14:00\u201317:00)", arr:"Continuous", id:"S1", from:"Hotels/MBS", to:"MBS/Hotels", dep:"14:00", arv:"17:00", pax:40, cap:40, note:"45-min loop", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Shuttle Loop \u2014 Hotels \u2194 MBS (14:00\u201317:00)", arr:"Continuous", id:"S2", from:"Hotels/MBS", to:"MBS/Hotels", dep:"14:00", arv:"17:00", pax:40, cap:40, note:"45-min loop", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Shuttle Loop \u2014 Hotels \u2194 MBS (14:00\u201317:00)", arr:"Continuous", id:"S3", from:"Hotels/MBS", to:"MBS/Hotels", dep:"14:00", arv:"17:00", pax:40, cap:40, note:"45-min loop", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (14:30)", arr:"14:30", id:1, from:"MBS", to:"Rendezvous", dep:"14:00", arv:"14:20", pax:20, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (14:30)", arr:"14:30", id:2, from:"MBS", to:"Parkroyal MB", dep:"14:00", arv:"14:20", pax:20, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (17:15)", arr:"17:15", id:1, from:"Rendezvous", to:"MBS", dep:"16:45", arv:"17:05", pax:20, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"Hotels \u2192 MBS (17:15)", arr:"17:15", id:2, from:"Parkroyal MB", to:"MBS", dep:"16:45", arv:"17:05", pax:20, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (Late Night)", arr:"\u2014", id:1, from:"MBS", to:"Rendezvous", dep:"23:00", arv:"23:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (Late Night)", arr:"\u2014", id:2, from:"MBS", to:"Parkroyal MB", dep:"23:00", arv:"23:20", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (Late Night)", arr:"\u2014", id:3, from:"MBS", to:"Rendezvous", dep:"23:05", arv:"23:30", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (Late Night)", arr:"\u2014", id:4, from:"MBS", to:"Parkroyal MB", dep:"23:05", arv:"23:15", pax:38, cap:40, note:"", lo:1 },
+  { day:"10 Sep (Thu)", svc:"MBS \u2192 Hotels (Late Night)", arr:"\u2014", id:5, from:"MBS", to:"Rendezvous", dep:"23:05", arv:"23:15", pax:38, cap:40, note:"", lo:1 },
+];
+
+let counter = 0;
+function nextId(): string {
+  counter += 1;
+  return `static-${counter}`;
+}
+
+function toRouteId(row: RawRow): string {
+  return `${row.day}--${row.svc}`.replace(/\s+/g, "-").toLowerCase();
+}
+
+/**
+ * Converts raw schedule rows into TripWithRoute[] shape
+ * so all existing components can consume it without changes.
+ */
+export function getStaticTrips(): TripWithRoute[] {
+  counter = 0;
+  return RAW_SCHEDULE.map((row) => ({
+    id: nextId(),
+    routeId: toRouteId(row),
+    busIdentifier: `Bus ${row.id}`,
+    maxCapacity: row.cap,
+    currentPax: row.pax,
+    assignedLoCount: row.lo,
+    status: "scheduled" as const,
+    actualDepartureTime: null,
+    actualArrivalTime: null,
+    operationalNote: row.note || null,
+    isSos: false,
+    isAdhoc: false,
+    conferenceDay: row.day,
+    serviceName: row.svc,
+    targetArrival: row.arr,
+    pickupLocation: row.from,
+    dropoffLocation: row.to,
+    scheduledDeparture: row.dep,
+    scheduledArrival: row.arv,
+  }));
+}
