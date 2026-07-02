@@ -17,8 +17,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const TOKEN_NAME = "sgatar_access_token";
-const TOKEN_SECRET =
-  process.env.ADMIN_PASSCODE ?? process.env.LO_PASSCODE ?? "dev-secret";
 
 const PROTECTED_PATHS = ["/lo", "/admin"];
 const PROTECTED_API_PATHS = ["/api/trips"];
@@ -30,6 +28,10 @@ const PROTECTED_API_PATHS = ["/api/trips"];
  */
 function verifyToken(token: string): { portal: string } | null {
   try {
+    // Read at request time so Airbase's runtime env vars are available.
+    const secret =
+      process.env.ADMIN_PASSCODE ?? process.env.LO_PASSCODE ?? "dev-secret";
+
     const decoded = Buffer.from(token, "base64url").toString();
     const parts = decoded.split(":");
     if (parts.length < 4) return null;
@@ -39,7 +41,7 @@ function verifyToken(token: string): { portal: string } | null {
 
     // Verify HMAC signature
     const payload = parts.slice(0, 3).join(":");
-    const expected = Buffer.from(TOKEN_SECRET + ":" + payload)
+    const expected = Buffer.from(secret + ":" + payload)
       .toString("base64url")
       .slice(0, 32);
     if (signature !== expected) return null;
