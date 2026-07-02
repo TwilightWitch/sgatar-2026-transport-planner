@@ -1,5 +1,24 @@
 "use client";
 
+/**
+ * @file LanguageSwitcher — i18n locale selector.
+ *
+ * Feature is currently shelved while translation coverage stabilises.
+ * To re-enable: restore the commented-out body below and remove the
+ * `return null` line.
+ */
+
+// import { Globe } from "lucide-react";
+// import { useI18n } from "@/lib/i18n/provider";
+// import { getLocaleList, type Locale } from "@/lib/i18n/dictionaries";
+
+/** Language picker — hidden until i18n is more stable. Returns nothing. */
+export function LanguageSwitcher() {
+  return null;
+}
+
+/*
+// ── Original implementation (preserved for re-enable) ───────────────────────
 import { Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { getLocaleList, type Locale } from "@/lib/i18n/dictionaries";
@@ -34,3 +53,4 @@ export function LanguageSwitcher() {
     </div>
   );
 }
+*/

@@ -2,8 +2,8 @@
 
 import { PersonalizedFleet } from "@/components/delegate/PersonalizedFleet";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { PortalNav } from "@/components/PortalNav";
 import { QuickGuide } from "@/components/QuickGuide";
+import { SiteHeader } from "@/components/SiteHeader";
 import { WhatsAppBanner } from "@/components/WhatsAppBanner";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -199,13 +199,8 @@ export default function DelegatePage() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <header className="border-b border-brand-700 bg-brand-900 px-4 py-3">
-        <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-lg font-bold text-white">SGATAR 2026</h1>
-          <PortalNav />
-        </div>
-      </header>
+    <div className="min-h-screen bg-cream-100 dark:bg-gray-950">
+      <SiteHeader maxWidth="max-w-4xl" />
 
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         {/* Top bar */}

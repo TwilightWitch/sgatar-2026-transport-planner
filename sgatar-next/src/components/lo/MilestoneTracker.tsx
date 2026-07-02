@@ -86,11 +86,11 @@ function AirportTransferBadge({
   routeType,
   flightNumber,
   terminal,
-}: {
+}: Readonly<{
   routeType: TripWithRoute["routeType"];
   flightNumber: string | null;
   terminal: string | null;
-}) {
+}>) {
   if (!routeType || routeType === "shuttle") return null;
   const typeLabel = ROUTE_TYPE_LABEL[routeType] ?? routeType;
 
@@ -134,13 +134,13 @@ function MilestoneStep({
   isPast,
   onClick,
   isLoading,
-}: {
+}: Readonly<{
   milestone: Milestone;
   isActive: boolean;
   isPast: boolean;
   onClick: () => void;
   isLoading: boolean;
-}) {
+}>) {
   const baseClass =
     "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg border-2 px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
@@ -180,7 +180,7 @@ function MilestoneStep({
  *
  * @param props.trip - The live trip record to display and control.
  */
-export function MilestoneTracker({ trip }: MilestoneTrackerProps) {
+export function MilestoneTracker({ trip }: Readonly<MilestoneTrackerProps>) {
   const updateHeadcount = useUpdateHeadcount();
   const activeIndex = MILESTONES.findIndex((m) => m.status === trip.status);
 

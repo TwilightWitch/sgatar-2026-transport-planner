@@ -4,10 +4,10 @@ import { AdhocBusForm } from "@/components/AdhocBusForm";
 import { BulkShiftSchedule } from "@/components/BulkShiftSchedule";
 import { CsvUpload } from "@/components/CsvUpload";
 import { FleetDashboard } from "@/components/FleetDashboard";
-import { PortalNav } from "@/components/PortalNav";
 import { QuickGuide } from "@/components/QuickGuide";
 import { ScheduleEditor } from "@/components/ScheduleEditor";
 import { SimulatorPanel } from "@/components/SimulatorPanel";
+import { SiteHeader } from "@/components/SiteHeader";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -22,27 +22,22 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-      <header className="border-b border-brand-700 bg-brand-900 px-4 py-3 sm:px-6 sm:py-4">
-        <div className="mx-auto max-w-7xl flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-cream-100 dark:bg-gray-950">
+      <SiteHeader maxWidth="max-w-7xl">
+        <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-bold text-white">Control Room</h1>
-            <p className="text-xs text-white/75">
-              SGATAR 2026 Fleet Operations
-            </p>
+            <p className="text-sm font-bold text-brand-500">Control Room</p>
+            <p className="text-xs text-gray-400">Fleet Operations</p>
           </div>
-          <div className="flex items-center gap-4">
-            <PortalNav />
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-              </span>
-              <span className="text-xs text-white/75">Live</span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+            </span>
+            <span className="text-xs text-gray-500">Live</span>
           </div>
         </div>
-      </header>
+      </SiteHeader>
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
         <QuickGuide

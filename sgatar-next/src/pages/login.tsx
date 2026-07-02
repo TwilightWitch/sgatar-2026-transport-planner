@@ -1,6 +1,6 @@
 "use client";
 
-import { Bus, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -46,16 +46,19 @@ export default function LoginPage() {
     })
       .then(async (res) => {
         if (res.ok) {
-          await router.push(redirect);
+          // Use a full page navigation (not router.push) so the Next.js
+          // middleware validates the new cookie in a real server round-trip.
+          // router.push() is a client-side transition that skips middleware,
+          // causing the cookie to go unchecked until the next hard reload.
+          globalThis.location.href = redirect;
         } else {
           const data = (await res.json()) as { error: string };
           setError(data.error);
+          setLoading(false);
         }
       })
       .catch(() => {
         setError("Network error. Please try again.");
-      })
-      .finally(() => {
         setLoading(false);
       });
   };
@@ -64,15 +67,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900">
-            <Bus
-              className="h-7 w-7 text-brand-600 dark:text-brand-400"
-              aria-hidden="true"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            SGATAR 2026
-          </h1>
+          <img
+            src="/SGATAR-2026-Logo.png"
+            alt="55th SGATAR Singapore 2026"
+            className="mx-auto mb-2 h-20 w-auto"
+          />
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Transport Operations Access
           </p>

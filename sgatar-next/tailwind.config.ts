@@ -10,26 +10,62 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /**
+         * Brand palette — derived from the SGATAR 2026 logo navy (#1D3272).
+         * Used for headers, nav, buttons, and interactive chrome.
+         */
         brand: {
-          50: "#eef2f7",
-          100: "#d4dde8",
-          200: "#a9bbcf",
-          500: "#1a3a5c",
-          600: "#142d4a",
-          700: "#0f2239",
-          800: "#0a1827",
-          900: "#0c1f36",
+          50: "#eaecf8",
+          100: "#c8ceec",
+          200: "#9aa5d8",
+          300: "#6172B6", // logo periwinkle (wave stripes)
+          400: "#3d56a0",
+          500: "#1D3272", // logo primary navy
+          600: "#172c63",
+          700: "#112252",
+          800: "#0c1840",
+          900: "#090f2c", // darkest — used for page headers/nav
         },
+        /**
+         * Accent palette — derived from the SGATAR 2026 crimson (#E52030).
+         * Used for "SINGAPORE" callouts, SOS states, and danger indicators.
+         */
         accent: {
-          50: "#fef2f2",
-          100: "#fee2e2",
-          500: "#c8102e",
-          600: "#a50d24",
-          700: "#82091a",
+          50: "#fde8ea",
+          100: "#f8bcc1",
+          500: "#E52030", // logo crimson
+          600: "#c41c29",
+          700: "#9e1621",
+        },
+        /** Logo gold (#F5B200) — used sparingly for highlight accents. */
+        gold: {
+          400: "#FAC107",
+          500: "#F5B200",
+          600: "#D99E00",
+        },
+        /**
+         * Cream — warm ivory drawn from the lion's face in the logo.
+         * Used as the main page background to carry the logo's palette
+         * into the content area.
+         */
+        cream: {
+          50: "#fefcf7",
+          100: "#fdf6e8",
+          200: "#f9ead0",
+          300: "#f4dab5",
         },
         sos: {
-          DEFAULT: "#c8102e",
+          DEFAULT: "#E52030",
           pulse: "#fecaca",
+        },
+        /**
+         * Slate (#2E3B4E) — the dark charcoal used for headings in SGATAR
+         * 2026 print collaterals.  WCAG contrast on cream-100: ~13:1 (AAA).
+         */
+        slate: {
+          700: "#2E3B4E",
+          800: "#1f2a38",
+          900: "#141c25",
         },
       },
       animation: {

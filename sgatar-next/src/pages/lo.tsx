@@ -3,8 +3,8 @@
 import { HeadcountControls } from "@/components/HeadcountControls";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MilestoneTracker } from "@/components/lo/MilestoneTracker";
-import { PortalNav } from "@/components/PortalNav";
 import { QuickGuide } from "@/components/QuickGuide";
+import { SiteHeader } from "@/components/SiteHeader";
 import { SosButton } from "@/components/SosButton";
 import { useActiveTrips } from "@/hooks/useLiveFleet";
 import { useI18n } from "@/lib/i18n/provider";
@@ -34,13 +34,12 @@ export default function LoPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <header className="border-b border-brand-700 bg-brand-900 px-4 py-3">
-        <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-lg font-bold text-white">LO Portal</h1>
-          <PortalNav />
-        </div>
-      </header>
+    <div className="min-h-screen bg-cream-100 dark:bg-gray-950">
+      <SiteHeader maxWidth="max-w-lg">
+        <span className="text-sm font-semibold text-brand-500">
+          Liaison Officer Portal
+        </span>
+      </SiteHeader>
 
       <main className="mx-auto max-w-lg space-y-4 px-4 py-4">
         <div className="flex justify-end">
@@ -125,10 +124,24 @@ export default function LoPage() {
             </summary>
             <div className="mt-2 space-y-3 pl-1">
               {serviceTrips.map((trip) => (
-                <div key={trip.id} className="space-y-2">
-                  <MilestoneTracker trip={trip} />
-                  <HeadcountControls trip={trip} />
-                  <SosButton trip={trip} />
+                <div
+                  key={trip.id}
+                  className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900"
+                >
+                  {/* Bus identifier header */}
+                  <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {trip.busIdentifier}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {trip.pickupLocation} → {trip.dropoffLocation}
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    <MilestoneTracker trip={trip} />
+                    <HeadcountControls trip={trip} />
+                    <SosButton trip={trip} />
+                  </div>
                 </div>
               ))}
             </div>

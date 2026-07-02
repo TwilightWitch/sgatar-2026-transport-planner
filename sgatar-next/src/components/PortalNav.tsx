@@ -2,12 +2,11 @@
  * @file PortalNav component.
  *
  * Compact horizontal navigation bar rendered in every portal header.  Links
- * to all four portals (Delegate, LO, Admin, Display) with the current portal
+ * to all four portals (Delegates, LO, Admin, Display) with the current portal
  * highlighted.  Uses Next.js `<Link>` for client-side navigation.
  *
- * Designed for dark header backgrounds — active links use `bg-white/20` and
- * inactive links use `text-white/70` to meet WCAG 4.5:1 contrast on dark
- * backgrounds.
+ * Designed for light / white header backgrounds — active links use the brand
+ * navy, inactive links are muted brand-400 that darken on hover.
  */
 "use client";
 
@@ -15,7 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Delegate" },
+  { href: "/", label: "Delegates" },
   { href: "/lo", label: "LO Portal" },
   { href: "/admin", label: "Admin" },
   { href: "/display", label: "Display" },
@@ -35,10 +34,10 @@ export function PortalNav() {
         <Link
           key={item.href}
           href={item.href}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             isActive(item.href)
-              ? "bg-white/20 text-white"
-              : "text-white/70 hover:bg-white/10 hover:text-white"
+              ? "bg-brand-500 text-white"
+              : "text-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:text-brand-300 dark:hover:bg-brand-900 dark:hover:text-white"
           }`}
         >
           {item.label}
