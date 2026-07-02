@@ -646,9 +646,9 @@ const RAW_SCHEDULE: RawRow[] = [
   },
   {
     day: "9 Sep (Wed)",
-    svc: "MBS \u2192 Night Safari",
+    svc: "Hotels \u2192 Night Safari",
     arr: "18:15",
-    id: 1,
+    id: 6,
     from: "MBS",
     to: "Night Safari",
     dep: "17:30",
@@ -660,9 +660,9 @@ const RAW_SCHEDULE: RawRow[] = [
   },
   {
     day: "9 Sep (Wed)",
-    svc: "MBS \u2192 Night Safari",
+    svc: "Hotels \u2192 Night Safari",
     arr: "18:15",
-    id: 2,
+    id: 7,
     from: "MBS",
     to: "Night Safari",
     dep: "17:35",

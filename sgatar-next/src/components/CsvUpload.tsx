@@ -13,6 +13,11 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
+interface UploadResponse {
+  message?: string;
+  error?: string;
+}
+
 interface CsvUploadProps {
   onUploaded: () => void;
 }
@@ -26,15 +31,15 @@ export function CsvUpload({ onUploaded }: Readonly<CsvUploadProps>) {
     setIsUploading(true);
     setStatus(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    interface UploadResponse {
-      message?: string;
-      error?: string;
-    }
-
-    void fetch("/api/trips/upload", { method: "POST", body: formData })
+    void file
+      .text()
+      .then((csv) =>
+        fetch("/api/trips/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csv }),
+        }),
+      )
       .then(async (res) => {
         const data = (await res.json()) as UploadResponse;
         if (res.ok) {

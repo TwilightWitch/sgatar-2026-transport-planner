@@ -1,26 +1,29 @@
 /**
  * @file CSV upload API route — `POST /api/trips/upload`.
  *
- * Accepts a `multipart/form-data` request containing a single `.csv` file.
- * Each data row is matched against the existing trip roster by Bus Identifier +
- * Conference Day + Service Name:
- * - **Match found** → fields from the row are merged into the existing trip.
- * - **No match, bus ID present** → a new trip is created from the row data.
- * - **No bus ID** → the row is skipped.
+ * Accepts `{ csv: string }` JSON containing the raw CSV text.  Each row is
+ * matched against the existing roster by Bus Identifier + Conference Day +
+ * Service Name; matched rows update the existing trip, unmatched rows with a
+ * bus ID create a new trip.
  *
- * Limits: 512 KB file size, 500 rows per upload.
- *
- * Protected by the proxy authentication layer (admin token required).
+ * Limits: 512 KB body, 500 rows.
  */
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
 import { addTrip, getTrips, updateTrip } from "@/lib/tripStore";
-import { NextRequest, NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
+
+export const config = {
+  api: { bodyParser: { sizeLimit: "512kb" } },
+};
+
+interface UploadBody {
+  csv: string;
+}
 
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = "";
   let inQuotes = false;
-
   for (const char of line) {
     if (char === '"') {
       inQuotes = !inQuotes;
@@ -91,7 +94,7 @@ function buildNewTrip(
       "7 Sep (Mon)",
     serviceName:
       col(row, "servicename", "service", "svc") || "Uploaded Service",
-    targetArrival: col(row, "targetarrival", "arr") || "—",
+    targetArrival: col(row, "targetarrival", "arr") || "-",
     pickupLocation: col(row, "pickuplocation", "from") || "TBC",
     dropoffLocation: col(row, "dropofflocation", "to") || "TBC",
     scheduledDeparture: col(row, "scheduleddeparture", "dep") || "TBC",
@@ -102,98 +105,76 @@ function buildNewTrip(
   };
 }
 
-function processRow(
-  row: Record<string, string>,
-  index: number,
-  existingTrips: TripWithRoute[],
-): { updated: boolean; created: boolean } {
-  const busId = col(row, "busidentifier", "bus", "id");
-  const matchIdx = existingTrips.findIndex(
-    (t) =>
-      t.busIdentifier === busId &&
-      t.conferenceDay === col(row, "conferenceday", "day") &&
-      t.serviceName === col(row, "servicename", "service", "svc"),
-  );
+const MAX_ROWS = 500;
 
-  if (matchIdx >= 0) {
-    updateTrip(existingTrips[matchIdx].id, buildPatch(row));
-    return { updated: true, created: false };
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
+  if (req.method !== "POST") {
+    res.status(405).end("Method Not Allowed");
+    return;
   }
 
-  if (busId) {
-    addTrip(buildNewTrip(row, index, existingTrips));
-    return { updated: false, created: true };
-  }
-
-  return { updated: false, created: false };
-}
-
-export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get("file");
+    const body = req.body as UploadBody;
+    const text = body?.csv;
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "No CSV file provided" },
-        { status: 400 },
-      );
+    if (!text || typeof text !== "string") {
+      res.status(400).json({ error: "No CSV data provided" });
+      return;
     }
 
-    // Size limit: 1 MB to prevent OOM
-    if (file.size > 1_048_576) {
-      return NextResponse.json(
-        { error: "File too large (max 1 MB)" },
-        { status: 400 },
-      );
-    }
-
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-
-    // Row limit: max 500 data rows
-    if (lines.length > 501) {
-      return NextResponse.json(
-        { error: "Too many rows (max 500 data rows)" },
-        { status: 400 },
-      );
-    }
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
 
     if (lines.length < 2) {
-      return NextResponse.json(
-        { error: "CSV must have a header row and at least one data row" },
-        { status: 400 },
-      );
+      res.status(400).json({ error: "CSV must have a header row and data" });
+      return;
     }
 
     const headers = parseCsvLine(lines[0]).map((h) =>
-      h.toLowerCase().replace(/\s+/g, ""),
+      h.toLowerCase().replace(/[^a-z0-9]/g, ""),
     );
+    const dataLines = lines.slice(1, MAX_ROWS + 1);
+
     const existingTrips = getTrips();
     let updated = 0;
     let created = 0;
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCsvLine(lines[i]);
+    for (const [i, line] of dataLines.entries()) {
+      const values = parseCsvLine(line);
       const row: Record<string, string> = {};
       headers.forEach((h, idx) => {
         row[h] = values[idx] ?? "";
       });
-      const result = processRow(row, i, existingTrips);
-      if (result.updated) updated++;
-      if (result.created) created++;
+
+      const busId = col(row, "busidentifier", "bus", "id");
+      const matchIdx = existingTrips.findIndex(
+        (t) =>
+          t.busIdentifier === busId &&
+          t.conferenceDay === col(row, "conferenceday", "day") &&
+          t.serviceName === col(row, "servicename", "service", "svc"),
+      );
+
+      if (matchIdx >= 0) {
+        updateTrip(existingTrips[matchIdx].id, buildPatch(row));
+        updated++;
+      } else if (busId) {
+        addTrip(buildNewTrip(row, i, existingTrips));
+        created++;
+      }
     }
 
-    return NextResponse.json({
-      message: `Processed ${lines.length - 1} rows: ${updated} updated, ${created} created`,
+    res.json({
+      message: `Updated ${updated}, created ${created} trip${created === 1 ? "" : "s"}`,
       updated,
       created,
     });
   } catch (error) {
     console.error("POST /api/trips/upload error:", error);
-    return NextResponse.json(
-      { error: "Failed to process CSV" },
-      { status: 500 },
-    );
+    res.status(500).json({ error: "Failed to process CSV upload" });
   }
 }

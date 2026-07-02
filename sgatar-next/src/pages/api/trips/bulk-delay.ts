@@ -1,19 +1,11 @@
 /**
  * @file Bulk delay API route — `POST /api/trips/bulk-delay`.
  *
- * Shifts the scheduled departure time of all non-completed trips on a given
- * route forward by a specified number of minutes, and marks their status as
- * `"delayed"`.  When `clearDelay: true` is passed instead, all delayed trips
- * on the route have their status reset to `"scheduled"` without touching times.
- *
- * When `DATABASE_URL` is configured the update is applied directly to the
- * `routes` table (so the base schedule shifts) and the `active_trips` statuses
- * are updated.  In no-DB mode the in-memory store is updated instead.
- *
- * Protected by the proxy authentication layer (admin token required).
+ * Shifts departure times forward (apply delay) or resets status to scheduled
+ * (clear delay) for all non-completed trips on a route.
  */
 import { getTrips, updateTrip } from "@/lib/tripStore";
-import { NextRequest, NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 interface BulkDelayBody {
   routeId: string;
@@ -33,7 +25,10 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
 }
 
-async function handleClearDelay(routeId: string): Promise<NextResponse> {
+async function handleClearDelay(
+  routeId: string,
+  res: NextApiResponse,
+): Promise<void> {
   if (process.env.DATABASE_URL) {
     try {
       const { db } = await import("@/db");
@@ -51,10 +46,11 @@ async function handleClearDelay(routeId: string): Promise<NextResponse> {
         )
         .returning();
 
-      return NextResponse.json({
+      res.json({
         message: `Cleared delay on ${updated.length} trip${updated.length === 1 ? "" : "s"}`,
         affectedTrips: updated.length,
       });
+      return;
     } catch (error) {
       console.error("POST bulk-delay clear DB error, falling back:", error);
     }
@@ -67,7 +63,7 @@ async function handleClearDelay(routeId: string): Promise<NextResponse> {
   for (const trip of affected) {
     updateTrip(trip.id, { status: "scheduled" });
   }
-  return NextResponse.json({
+  res.json({
     message: `Cleared delay on ${affected.length} trip${affected.length === 1 ? "" : "s"}`,
     affectedTrips: affected.length,
   });
@@ -76,7 +72,8 @@ async function handleClearDelay(routeId: string): Promise<NextResponse> {
 async function handleApplyDelay(
   routeId: string,
   delayMinutes: number,
-): Promise<NextResponse> {
+  res: NextApiResponse,
+): Promise<void> {
   if (process.env.DATABASE_URL) {
     try {
       const { db } = await import("@/db");
@@ -101,10 +98,11 @@ async function handleApplyDelay(
         )
         .returning();
 
-      return NextResponse.json({
+      res.json({
         message: `Delayed ${updated.length} trip${updated.length === 1 ? "" : "s"} by ${delayMinutes} minutes`,
         affectedTrips: updated.length,
       });
+      return;
     } catch (error) {
       console.error("POST bulk-delay DB error, falling back:", error);
     }
@@ -124,25 +122,34 @@ async function handleApplyDelay(
       scheduledArrival: addMinutesToTime(trip.scheduledArrival, delayMinutes),
     });
   }
-  return NextResponse.json({
+  res.json({
     message: `Delayed ${affected.length} trip${affected.length === 1 ? "" : "s"} by ${delayMinutes} minutes`,
     affectedTrips: affected.length,
   });
 }
 
-export async function POST(request: NextRequest) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
+  if (req.method !== "POST") {
+    res.status(405).end("Method Not Allowed");
+    return;
+  }
+
   try {
-    const body = (await request.json()) as BulkDelayBody;
+    const body = req.body as BulkDelayBody;
 
     if (!body.routeId || typeof body.routeId !== "string") {
-      return NextResponse.json(
-        { error: "routeId is required and must be a string" },
-        { status: 400 },
-      );
+      res
+        .status(400)
+        .json({ error: "routeId is required and must be a string" });
+      return;
     }
 
     if (body.clearDelay) {
-      return handleClearDelay(body.routeId);
+      await handleClearDelay(body.routeId, res);
+      return;
     }
 
     if (
@@ -150,18 +157,15 @@ export async function POST(request: NextRequest) {
       body.delayMinutes <= 0 ||
       body.delayMinutes > 180
     ) {
-      return NextResponse.json(
-        { error: "delayMinutes must be a positive number (max 180)" },
-        { status: 400 },
-      );
+      res
+        .status(400)
+        .json({ error: "delayMinutes must be a positive number (max 180)" });
+      return;
     }
 
-    return handleApplyDelay(body.routeId, body.delayMinutes);
+    await handleApplyDelay(body.routeId, body.delayMinutes, res);
   } catch (error) {
     console.error("POST /api/trips/bulk-delay error:", error);
-    return NextResponse.json(
-      { error: "Failed to apply bulk delay" },
-      { status: 500 },
-    );
+    res.status(500).json({ error: "Failed to apply bulk delay" });
   }
 }

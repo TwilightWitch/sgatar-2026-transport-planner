@@ -5,14 +5,15 @@
  * `DATABASE_URL` is configured the data is fetched from Neon; otherwise the
  * in-memory static fallback store is used.
  *
- * This endpoint is polled by every connected client (delegate, LO, admin)
- * every 4 seconds via {@link useActiveTrips}.
+ * Polled every 4 seconds by all connected clients via {@link useActiveTrips}.
  */
 import { getTrips } from "@/lib/tripStore";
-import { NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
 
-export async function GET() {
-  // If DATABASE_URL is configured, try to load from live DB
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
   if (process.env.DATABASE_URL) {
     try {
       const { db } = await import("@/db");
@@ -44,12 +45,12 @@ export async function GET() {
         .from(activeTrips)
         .innerJoin(routes, eq(activeTrips.routeId, routes.id));
 
-      return NextResponse.json(trips);
+      res.json(trips);
+      return;
     } catch (error) {
       console.error("GET /api/trips DB error, falling back to static:", error);
     }
   }
 
-  // Fallback: return in-memory mutable schedule
-  return NextResponse.json(getTrips());
+  res.json(getTrips());
 }

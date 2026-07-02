@@ -17,7 +17,7 @@
 import { useUpdateHeadcount, type TripWithRoute } from "@/hooks/useLiveFleet";
 import { useI18n } from "@/lib/i18n/provider";
 import { Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface HeadcountControlsProps {
   trip: TripWithRoute;
@@ -41,17 +41,45 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
   const [textInput, setTextInput] = useState("");
   const [editingText, setEditingText] = useState(false);
 
+  // ── Slider local state ───────────────────────────────────────────────────
+  // The slider uses its own local value so that rapid dragging doesn't fire
+  // a mutation on every pixel.  We only commit when the pointer is released.
+  // A ref tracks whether a drag is in progress so the 4-second server refetch
+  // doesn't snap the slider back mid-drag.
+  const [sliderValue, setSliderValue] = useState(trip.currentPax);
+  const isDragging = useRef(false);
+
+  // Keep slider in sync with server when not being dragged
+  useEffect(() => {
+    if (!isDragging.current) {
+      setSliderValue(trip.currentPax);
+    }
+  }, [trip.currentPax]);
+
   const clamp = (v: number) => Math.min(Math.max(0, v), trip.maxCapacity);
 
   const commit = (newPax: number) => {
-    updateHeadcount.mutate({ tripId: trip.id, currentPax: clamp(newPax) });
+    const clamped = clamp(newPax);
+    setSliderValue(clamped); // keep slider in sync with button/text commits
+    updateHeadcount.mutate({ tripId: trip.id, currentPax: clamped });
   };
 
   const handleIncrement = () => commit(trip.currentPax + 1);
   const handleDecrement = () => commit(trip.currentPax - 1);
 
-  const handleSlider = (e: { target: HTMLInputElement }) => {
-    commit(Number(e.target.value));
+  // Slider: update local display only while dragging
+  const handleSliderChange = (e: { target: HTMLInputElement }) => {
+    setSliderValue(Number(e.target.value));
+  };
+
+  // Commit on pointer/touch release — fires once per drag gesture
+  const handleSliderCommit = () => {
+    isDragging.current = false;
+    commit(sliderValue);
+  };
+
+  const handleSliderPointerDown = () => {
+    isDragging.current = true;
   };
 
   const handleTextFocus = () => {
@@ -174,7 +202,7 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
           className="mb-1 flex justify-between text-xs text-gray-500 dark:text-gray-400"
         >
           <span>0</span>
-          <span className="font-medium">{trip.currentPax} pax</span>
+          <span className="font-medium">{sliderValue} pax</span>
           <span>{trip.maxCapacity}</span>
         </label>
         <input
@@ -182,9 +210,12 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
           type="range"
           min={0}
           max={trip.maxCapacity}
-          value={trip.currentPax}
-          onChange={handleSlider}
-          aria-label={`Passenger count: ${trip.currentPax} of ${trip.maxCapacity}`}
+          value={sliderValue}
+          onChange={handleSliderChange}
+          onPointerDown={handleSliderPointerDown}
+          onPointerUp={handleSliderCommit}
+          onTouchEnd={handleSliderCommit}
+          aria-label={`Passenger count: ${sliderValue} of ${trip.maxCapacity}`}
           className="w-full accent-brand-600"
         />
       </div>

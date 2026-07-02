@@ -12,7 +12,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 
 const NAV_ITEMS = [
   { href: "/", label: "Delegate" },
@@ -22,7 +22,7 @@ const NAV_ITEMS = [
 ] as const;
 
 export function PortalNav() {
-  const pathname = usePathname();
+  const { pathname } = useRouter();
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";

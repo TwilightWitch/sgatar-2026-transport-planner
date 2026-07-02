@@ -1,25 +1,38 @@
 "use client";
 
 import { Bus, Lock } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
-function LoginForm() {
-  const searchParams = useSearchParams();
+/**
+ * Login page — Pages Router version.
+ *
+ * No Suspense boundary needed: router.query is available synchronously in
+ * Pages Router without the restrictions that forced the Suspense wrapper in
+ * App Router's useSearchParams().
+ */
+export default function LoginPage() {
   const router = useRouter();
-  const redirect = searchParams.get("redirect") ?? "/lo";
-  const errorParam = searchParams.get("error");
 
+  const [redirect, setRedirect] = useState("/lo");
+  const [portal, setPortal] = useState<"lo" | "admin">("lo");
+  const [error, setError] = useState("");
   const [passcode, setPasscode] = useState("");
-  const [portal, setPortal] = useState<"lo" | "admin">(
-    redirect.startsWith("/admin") ? "admin" : "lo",
-  );
-  const [error, setError] = useState(
-    errorParam === "insufficient_access"
-      ? "You need admin access for this page."
-      : "",
-  );
   const [loading, setLoading] = useState(false);
+
+  // Populate from query string once the router is ready
+  useEffect(() => {
+    if (!router.isReady) return;
+    const raw = router.query.redirect as string | undefined;
+    // Only allow internal same-origin paths (prevent open redirect)
+    const safe =
+      raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/lo";
+    setRedirect(safe);
+    if (safe.startsWith("/admin")) setPortal("admin");
+    if (router.query.error === "insufficient_access") {
+      setError("You need admin access for this page.");
+    }
+  }, [router.isReady, router.query]);
 
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
@@ -33,7 +46,7 @@ function LoginForm() {
     })
       .then(async (res) => {
         if (res.ok) {
-          router.push(redirect);
+          await router.push(redirect);
         } else {
           const data = (await res.json()) as { error: string };
           setError(data.error);
@@ -133,19 +146,5 @@ function LoginForm() {
         </form>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
   );
 }
