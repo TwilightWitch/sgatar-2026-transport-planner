@@ -248,7 +248,7 @@ export default function DelegatePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <header className="border-b border-brand-700 bg-brand-900 px-4 py-3">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
+        <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-lg font-bold text-white">SGATAR 2026</h1>
           <PortalNav />
         </div>
@@ -384,8 +384,11 @@ export default function DelegatePage() {
 
                 <ol className="space-y-3 px-6 pb-4 pt-1">
                   {day.items.map((item) => (
-                    <li key={item.time + item.title} className="flex gap-3">
-                      <time className="mt-0.5 w-24 shrink-0 text-xs font-mono text-gray-500 dark:text-gray-400">
+                    <li
+                      key={item.time + item.title}
+                      className="flex gap-2 sm:gap-3"
+                    >
+                      <time className="mt-0.5 w-20 shrink-0 text-xs font-mono text-gray-500 dark:text-gray-400 sm:w-24">
                         {item.time}
                       </time>
                       <div className="min-w-0">

@@ -35,7 +35,7 @@ export default function LoPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <header className="border-b border-brand-700 bg-brand-900 px-4 py-3">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
+        <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-lg font-bold text-white">LO Portal</h1>
           <PortalNav />
         </div>

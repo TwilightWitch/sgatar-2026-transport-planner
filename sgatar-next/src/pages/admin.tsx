@@ -23,8 +23,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-      <header className="border-b border-brand-700 bg-brand-900 px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+      <header className="border-b border-brand-700 bg-brand-900 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto max-w-7xl flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold text-white">Control Room</h1>
             <p className="text-xs text-white/75">
@@ -44,7 +44,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
         <QuickGuide
           title="Control Room Quick Reference"
           items={[
