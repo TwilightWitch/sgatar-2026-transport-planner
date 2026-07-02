@@ -14,13 +14,16 @@ export default async function handler(
   _req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
+  // Polling endpoint — must never be served from browser or CDN cache.
+  res.setHeader("Cache-Control", "no-store");
+
   if (process.env.DATABASE_URL) {
     try {
       const { db } = await import("@/db");
       const { activeTrips, routes } = await import("@/db/schema");
       const { eq } = await import("drizzle-orm");
 
-      const trips = await db
+      const rawTrips = await db
         .select({
           id: activeTrips.id,
           routeId: activeTrips.routeId,
@@ -53,6 +56,13 @@ export default async function handler(
         })
         .from(activeTrips)
         .innerJoin(routes, eq(activeTrips.routeId, routes.id));
+
+      // Postgres `time` columns are returned as "HH:MM:SS" — normalise to "HH:MM"
+      // to match the static schedule format used everywhere in the UI.
+      const trips = rawTrips.map((t) => ({
+        ...t,
+        scheduledDeparture: t.scheduledDeparture.slice(0, 5),
+      }));
 
       res.json(trips);
       return;

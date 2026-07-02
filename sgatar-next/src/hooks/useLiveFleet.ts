@@ -106,7 +106,7 @@ const TRIPS_QUERY_KEY = ["activeTrips"] as const;
 const OFFLINE_QUEUE_KEY = "sgatar_offline_queue";
 
 async function fetchTrips(): Promise<TripWithRoute[]> {
-  const res = await fetch("/api/trips");
+  const res = await fetch("/api/trips", { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Failed to fetch trips: ${res.status}`);
   }

@@ -168,6 +168,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ): Promise<void> {
+  res.setHeader("Cache-Control", "no-store");
   const id = req.query.id as string;
 
   if (req.method === "PATCH") {
