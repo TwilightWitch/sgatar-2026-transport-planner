@@ -43,7 +43,22 @@ export function DepartureTimeline({ trips }: Readonly<DepartureTimelineProps>) {
       "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
     en_route:
       "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    departed_origin:
+      "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    arrived_destination:
+      "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
     completed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+  };
+
+  /** Human-readable label for each trip status — does not depend on i18n keys. */
+  const statusLabel: Record<TripWithRoute["status"], string> = {
+    scheduled: t.scheduled,
+    boarding: t.boarding,
+    en_route: t.enRoute,
+    delayed: t.delayed,
+    completed: t.completed,
+    departed_origin: "Departed",
+    arrived_destination: "Arrived",
   };
 
   if (upcoming.length === 0) {
@@ -100,7 +115,7 @@ export function DepartureTimeline({ trips }: Readonly<DepartureTimelineProps>) {
               <span
                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[trip.status] ?? statusStyles.scheduled}`}
               >
-                {t[trip.status === "en_route" ? "enRoute" : trip.status]}
+                {statusLabel[trip.status]}
               </span>
               {trip.currentPax >= trip.maxCapacity ? (
                 <span

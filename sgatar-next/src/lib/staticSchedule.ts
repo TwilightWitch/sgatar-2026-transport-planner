@@ -1036,5 +1036,10 @@ export function getStaticTrips(): TripWithRoute[] {
     driverName: null,
     driverPhone: null,
     plateNumber: null,
+    assignedDelegations: null,
+    routeType: "shuttle" as const,
+    flightNumber: null,
+    terminal: null,
+    pickupInstructions: null,
   }));
 }

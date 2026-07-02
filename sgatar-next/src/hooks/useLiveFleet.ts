@@ -1,15 +1,18 @@
 /**
  * @file Live fleet data hooks.
  *
- * Provides two React Query hooks consumed throughout the app:
+ * Provides three React Query hooks consumed throughout the app:
  *
- * - {@link useActiveTrips}   — Polls `/api/trips` every 4 s and returns the
+ * - {@link useActiveTrips}    — Polls `/api/trips` every 4 s and returns the
  *   full `TripWithRoute[]` list.  All portals share this single cached query.
  *
  * - {@link useUpdateHeadcount} — Mutation hook that PATCHes a single trip.  It
  *   applies an optimistic update immediately, rolls back on error, and queues
  *   changes in `localStorage` when the device is offline so they are replayed
  *   once connectivity is restored.
+ *
+ * - {@link useDelegateFleet} — Filtered view of `useActiveTrips` scoped to a
+ *   delegate's country, or the general pool when no country is selected.
  *
  * Also exports the {@link TripWithRoute} shape that is the canonical data
  * contract between the API and all UI components.
@@ -24,6 +27,12 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 
+/**
+ * Canonical data contract between the `/api/trips` endpoint and all UI components.
+ *
+ * Combines fields from both `active_trips` and the joined `routes` row so every
+ * consumer has a single, flat object to work with.
+ */
 export interface TripWithRoute {
   id: string;
   routeId: string;
@@ -31,13 +40,31 @@ export interface TripWithRoute {
   maxCapacity: number;
   currentPax: number;
   assignedLoCount: number;
-  status: "scheduled" | "boarding" | "en_route" | "delayed" | "completed";
+  /** Current milestone status of the trip lifecycle. */
+  status:
+    | "scheduled"
+    | "boarding"
+    | "departed_origin"
+    | "en_route"
+    | "delayed"
+    | "arrived_destination"
+    | "completed";
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   operationalNote: string | null;
   isSos: boolean;
   sosMessage: string | null;
   isAdhoc: boolean;
+  // Driver / vehicle identity
+  driverName: string | null;
+  driverPhone: string | null;
+  plateNumber: string | null;
+  /**
+   * ISO 3166-1 alpha-3 country codes bound to this trip.
+   * `null` or empty array means the trip is in the general delegate pool.
+   */
+  assignedDelegations: string[] | null;
+  // Route / schedule fields joined from the `routes` table
   conferenceDay: string;
   serviceName: string;
   targetArrival: string;
@@ -45,11 +72,22 @@ export interface TripWithRoute {
   dropoffLocation: string;
   scheduledDeparture: string;
   scheduledArrival: string;
-  driverName: string | null;
-  driverPhone: string | null;
-  plateNumber: string | null;
+  /**
+   * Discriminator for route category.
+   * - `'shuttle'`           — Regular conference shuttle between venues/hotels.
+   * - `'airport_arrival'`   — Airport pick-up run (delegates landing).
+   * - `'airport_departure'` — Airport drop-off run (delegates departing).
+   */
+  routeType: "shuttle" | "airport_arrival" | "airport_departure" | null;
+  /** IATA flight number; populated for airport transfer routes only. */
+  flightNumber: string | null;
+  /** Airport terminal identifier (e.g. "T3") for airport transfer routes. */
+  terminal: string | null;
+  /** Human-readable wayfinding instruction shown to delegates. */
+  pickupInstructions: string | null;
 }
 
+/** Payload sent to `PATCH /api/trips/[id]` by the LO portal. */
 interface HeadcountUpdate {
   tripId: string;
   currentPax: number;
@@ -92,8 +130,10 @@ async function patchTrip(update: HeadcountUpdate): Promise<TripWithRoute> {
  * Polls `/api/trips` every 4 seconds and returns the current list of active
  * trips joined with their route metadata.
  *
- * Data is considered stale after 2 s so refetches triggered by window focus or
- * network restore pick up the latest server state promptly.
+ * - `staleTime: 2000` means window-focus refetches pick up fresh data quickly.
+ * - `retry: 1` with `retryDelay: 1000` means a single transient failure is
+ *   retried after 1 s (instead of the default exponential back-off), so the
+ *   "Connection lost" banner clears within ~5 s rather than ~30 s.
  */
 export function useActiveTrips() {
   return useQuery<TripWithRoute[]>({
@@ -102,6 +142,7 @@ export function useActiveTrips() {
     refetchInterval: 4000,
     staleTime: 2000,
     retry: 1,
+    retryDelay: 1000,
   });
 }
 
@@ -237,4 +278,38 @@ export function useUpdateHeadcount() {
       });
     },
   });
+}
+
+// ── Delegate fleet hook ───────────────────────────────────────────────────────
+
+/**
+ * Returns a delegate-scoped view of the live fleet.
+ *
+ * Filtering logic (in order of precedence):
+ * 1. If `delegateCountry` is `null` or empty, returns every non-completed trip
+ *    (unfiltered general view).
+ * 2. Otherwise returns trips whose `assignedDelegations` array either:
+ *    - **includes** the `delegateCountry` code (personalised service), OR
+ *    - is `null` / empty (general pool trip visible to all delegates).
+ *
+ * The result is a stable memoised derivation of the shared `useActiveTrips`
+ * cache — no additional network requests are made.
+ *
+ * @param delegateCountry - ISO 3166-1 alpha-3 country code selected by the
+ *   delegate, or `null` to show all trips.
+ * @returns `{ data, isLoading, error }` mirroring the React Query shape.
+ */
+export function useDelegateFleet(delegateCountry: string | null) {
+  const { data: trips, isLoading, error } = useActiveTrips();
+
+  const data = trips?.filter((trip) => {
+    if (trip.status === "completed") return false;
+    if (!delegateCountry) return true;
+    const hasDelegations =
+      trip.assignedDelegations && trip.assignedDelegations.length > 0;
+    if (!hasDelegations) return true;
+    return trip.assignedDelegations?.includes(delegateCountry) ?? false;
+  });
+
+  return { data, isLoading, error };
 }

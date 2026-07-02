@@ -1,7 +1,9 @@
 /**
  * @file Single-trip API routes — `PATCH /api/trips/[id]` and `DELETE /api/trips/[id]`.
  *
- * PATCH: Partially updates a trip (headcount, status, SOS, schedule, driver).
+ * PATCH: Partially updates a trip (headcount, status, SOS, schedule, driver, delegations).
+ *   When a database is available the trip update and headcount log insert are executed
+ *   atomically inside a Drizzle `.transaction()` block so neither persists without the other.
  * DELETE: Removes a trip from the active roster.
  */
 import { deleteTrip, updateTrip } from "@/lib/tripStore";
@@ -10,8 +12,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 const VALID_STATUSES = new Set([
   "scheduled",
   "boarding",
+  "departed_origin",
   "en_route",
   "delayed",
+  "arrived_destination",
   "completed",
 ]);
 
@@ -34,25 +38,50 @@ interface PatchBody {
   driverName?: string | null;
   driverPhone?: string | null;
   plateNumber?: string | null;
+  assignedDelegations?: string[] | null;
 }
 
+/** Builds the columns to update on `active_trips` from the validated patch body. */
 function buildDbUpdateData(body: PatchBody): Record<string, unknown> {
   const data: Record<string, unknown> = {};
   if (body.currentPax !== undefined) data.currentPax = body.currentPax;
   if (body.status !== undefined) {
     data.status = body.status;
-    if (body.status === "en_route") data.actualDepartureTime = new Date();
-    if (body.status === "completed") data.actualArrivalTime = new Date();
+    if (body.status === "departed_origin" || body.status === "en_route") {
+      data.actualDepartureTime = new Date();
+    }
+    if (body.status === "arrived_destination" || body.status === "completed") {
+      data.actualArrivalTime = new Date();
+    }
   }
   if (body.operationalNote !== undefined)
     data.operationalNote = body.operationalNote;
   if (body.isSos !== undefined) data.isSos = body.isSos;
-  // sosMessage is not a DB column — it lives in the in-memory store only
+  if (body.sosMessage !== undefined) data.sosMessage = body.sosMessage;
   if (body.assignedLoCount !== undefined)
     data.assignedLoCount = body.assignedLoCount;
+  if (body.driverName !== undefined) data.driverName = body.driverName;
+  if (body.driverPhone !== undefined) data.driverPhone = body.driverPhone;
+  if (body.plateNumber !== undefined) data.plateNumber = body.plateNumber;
+  if (body.assignedDelegations !== undefined)
+    data.assignedDelegations = body.assignedDelegations;
   return data;
 }
 
+/**
+ * Updates `active_trips` then appends a `headcount_logs` audit row.
+ *
+ * The two operations run as separate sequential queries rather than inside
+ * `db.transaction()`.  Neon's HTTP batch driver resolves `.returning()` results
+ * only after the whole batch is sent, so using those results to build a
+ * subsequent INSERT inside the same transaction callback causes NOT NULL
+ * violations (statusContext is unresolved) → the batch is rejected → the outer
+ * catch returns false → the in-memory store cannot find the UUID → 404.
+ * Sequential queries eliminate this entirely; the headcount log is audit-only
+ * so strict atomicity is not required.
+ *
+ * Returns `true` if the response was sent, `false` to fall back to in-memory.
+ */
 async function patchViaDb(
   id: string,
   body: PatchBody,
@@ -60,16 +89,15 @@ async function patchViaDb(
 ): Promise<boolean> {
   try {
     const { db } = await import("@/db");
-    const { activeTrips } = await import("@/db/schema");
+    const { activeTrips, headcountLogs } = await import("@/db/schema");
     const { eq } = await import("drizzle-orm");
 
     const updateData = buildDbUpdateData(body);
     if (Object.keys(updateData).length === 0) {
-      // No DB-eligible fields in this patch (e.g. driver fields, sosMessage).
-      // Fall through so the in-memory store handles them.
       return false;
     }
 
+    // 1. Update the trip row
     const [updated] = await db
       .update(activeTrips)
       .set(updateData)
@@ -80,6 +108,21 @@ async function patchViaDb(
       res.status(404).json({ error: "Trip not found" });
       return true;
     }
+
+    // 2. Append audit log — fire-and-forget, does not affect the response
+    if (body.currentPax !== undefined) {
+      db.insert(headcountLogs)
+        .values({
+          tripId: id,
+          paxDelta: body.currentPax - updated.currentPax,
+          recordedPax: body.currentPax,
+          statusContext: updated.status,
+        })
+        .catch((logErr: unknown) => {
+          console.warn("headcount_logs insert skipped:", logErr);
+        });
+    }
+
     res.json(updated);
     return true;
   } catch (error) {

@@ -1,14 +1,11 @@
 "use client";
 
-import { DepartureTimeline } from "@/components/DepartureTimeline";
+import { PersonalizedFleet } from "@/components/delegate/PersonalizedFleet";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PortalNav } from "@/components/PortalNav";
 import { QuickGuide } from "@/components/QuickGuide";
 import { WhatsAppBanner } from "@/components/WhatsAppBanner";
-import type { TripWithRoute } from "@/hooks/useLiveFleet";
-import { useActiveTrips } from "@/hooks/useLiveFleet";
 import { useI18n } from "@/lib/i18n/provider";
-import { useEffect, useState } from "react";
 
 // ── Conference schedule data ────────────────────────────────────────────────
 
@@ -194,56 +191,12 @@ function DressBadge({ dress }: Readonly<{ dress: string }>) {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function filterTrips(
-  trips: TripWithRoute[],
-  location: string,
-): TripWithRoute[] {
-  if (location === "all") return trips;
-  return trips.filter(
-    (t) => t.pickupLocation === location || t.dropoffLocation === location,
-  );
-}
+// (filterTrips helper removed — now handled inside PersonalizedFleet)
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DelegatePage() {
-  const { data: trips, isLoading } = useActiveTrips();
   const { t } = useI18n();
-
-  // Day tabs – derived from live trip data
-  const days = trips
-    ? [...new Set(trips.map((tr) => tr.conferenceDay))].sort(
-        (a, b) => parseInt(a, 10) - parseInt(b, 10),
-      )
-    : [];
-
-  const [selectedDay, setSelectedDay] = useState<string>("");
-  const [filterLocation, setFilterLocation] = useState<string>("all");
-
-  // Default to the first day once data loads
-  useEffect(() => {
-    if (days.length > 0 && !selectedDay) {
-      setSelectedDay(days[0]);
-    }
-  }, [days, selectedDay]);
-
-  // Reset hotel filter whenever the day tab changes
-  const handleDayChange = (day: string) => {
-    setSelectedDay(day);
-    setFilterLocation("all");
-  };
-
-  const dayTrips =
-    trips?.filter((tr) => tr.conferenceDay === selectedDay) ?? [];
-
-  const locationsForDay = [
-    ...new Set([
-      ...dayTrips.map((tr) => tr.pickupLocation),
-      ...dayTrips.map((tr) => tr.dropoffLocation),
-    ]),
-  ].sort((a, b) => a.localeCompare(b));
-
-  const filteredTrips = filterTrips(dayTrips, filterLocation);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -270,83 +223,20 @@ export default function DelegatePage() {
           items={[
             { icon: "🔄", text: t.guideAutoRefresh },
             {
-              icon: "📅",
-              text: "Select a conference day tab to see that day's buses.",
+              icon: "🌏",
+              text: "Select your delegation to see personalised transport.",
             },
-            { icon: "🏨", text: t.guideHotelFilter },
-            { icon: "🔴", text: t.guideBusFull },
+            {
+              icon: "✈️",
+              text: "Switch between Daily Shuttles and Airport Transfers.",
+            },
+            { icon: "📍", text: "Pickup instructions are shown on each card." },
             { icon: "📱", text: t.guideWhatsApp },
           ]}
         />
 
-        {/* ── Transport section ─────────────────────────────────────────── */}
-        <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          {/* Day tabs */}
-          {days.length > 0 && (
-            <div className="flex overflow-x-auto border-b border-gray-200 px-4 pt-4 dark:border-gray-700">
-              {days.map((day) => (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => handleDayChange(day)}
-                  className={`mr-1 shrink-0 rounded-t-lg px-4 py-2 text-xs font-medium transition-colors ${
-                    selectedDay === day
-                      ? "border-b-2 border-brand-600 bg-white text-brand-700 dark:border-brand-400 dark:bg-gray-900 dark:text-brand-300"
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="space-y-4 p-4">
-            {/* Hotel filter */}
-            {locationsForDay.length > 1 && (
-              <div>
-                <label
-                  htmlFor="location-filter"
-                  className="block text-xs font-medium text-gray-600 dark:text-gray-400"
-                >
-                  {t.filterByHotel}
-                </label>
-                <select
-                  id="location-filter"
-                  value={filterLocation}
-                  onChange={(e) => setFilterLocation(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                >
-                  <option value="all">{t.allLocations}</option>
-                  {locationsForDay.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {isLoading && (
-              <output className="flex items-center justify-center py-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-                <span className="sr-only">
-                  Loading transport information...
-                </span>
-              </output>
-            )}
-
-            {!isLoading && selectedDay && filteredTrips.length === 0 && (
-              <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                No departures scheduled for this day and location.
-              </p>
-            )}
-
-            {filteredTrips.length > 0 && (
-              <DepartureTimeline trips={filteredTrips} />
-            )}
-          </div>
-        </section>
+        {/* ── Personalised transport feed ───────────────────────────────── */}
+        <PersonalizedFleet />
 
         {/* ── Conference schedule ────────────────────────────────────────── */}
         <section className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">

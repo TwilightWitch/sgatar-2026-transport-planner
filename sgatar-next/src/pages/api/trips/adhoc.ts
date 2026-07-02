@@ -94,6 +94,11 @@ export default async function handler(
       driverName: null,
       driverPhone: null,
       plateNumber: null,
+      assignedDelegations: null,
+      routeType: "shuttle",
+      flightNumber: null,
+      terminal: null,
+      pickupInstructions: null,
     };
 
     addTrip(newTrip);

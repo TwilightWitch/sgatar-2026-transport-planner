@@ -2,6 +2,7 @@
 
 import { HeadcountControls } from "@/components/HeadcountControls";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MilestoneTracker } from "@/components/lo/MilestoneTracker";
 import { PortalNav } from "@/components/PortalNav";
 import { QuickGuide } from "@/components/QuickGuide";
 import { SosButton } from "@/components/SosButton";
@@ -69,7 +70,12 @@ export default function LoPage() {
             className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
             role="alert"
           >
-            Connection lost. Changes will sync when online.
+            Connection lost — retrying automatically.
+            {process.env.NODE_ENV === "development" && (
+              <span className="ml-1 opacity-60">
+                ({error instanceof Error ? error.message : "unknown error"})
+              </span>
+            )}
           </div>
         )}
 
@@ -120,6 +126,7 @@ export default function LoPage() {
             <div className="mt-2 space-y-3 pl-1">
               {serviceTrips.map((trip) => (
                 <div key={trip.id} className="space-y-2">
+                  <MilestoneTracker trip={trip} />
                   <HeadcountControls trip={trip} />
                   <SosButton trip={trip} />
                 </div>

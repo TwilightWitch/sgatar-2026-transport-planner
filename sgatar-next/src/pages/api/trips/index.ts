@@ -34,6 +34,11 @@ export default async function handler(
           operationalNote: activeTrips.operationalNote,
           isSos: activeTrips.isSos,
           isAdhoc: activeTrips.isAdhoc,
+          driverName: activeTrips.driverName,
+          driverPhone: activeTrips.driverPhone,
+          plateNumber: activeTrips.plateNumber,
+          assignedDelegations: activeTrips.assignedDelegations,
+          sosMessage: activeTrips.sosMessage,
           conferenceDay: routes.conferenceDay,
           serviceName: routes.serviceName,
           targetArrival: routes.targetArrival,
@@ -41,6 +46,10 @@ export default async function handler(
           dropoffLocation: routes.dropoffLocation,
           scheduledDeparture: routes.scheduledDeparture,
           scheduledArrival: routes.scheduledArrival,
+          routeType: routes.routeType,
+          flightNumber: routes.flightNumber,
+          terminal: routes.terminal,
+          pickupInstructions: routes.pickupInstructions,
         })
         .from(activeTrips)
         .innerJoin(routes, eq(activeTrips.routeId, routes.id));

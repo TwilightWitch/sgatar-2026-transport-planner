@@ -102,6 +102,11 @@ function buildNewTrip(
     driverName: col(row, "drivername", "driver") || null,
     driverPhone: col(row, "driverphone", "phone") || null,
     plateNumber: col(row, "platenumber", "plate") || null,
+    assignedDelegations: null,
+    routeType: "shuttle",
+    flightNumber: null,
+    terminal: null,
+    pickupInstructions: null,
   };
 }
 

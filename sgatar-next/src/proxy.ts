@@ -19,6 +19,11 @@ import { NextRequest, NextResponse } from "next/server";
 const TOKEN_NAME = "sgatar_access_token";
 
 const PROTECTED_PATHS = ["/lo", "/admin"];
+/**
+ * API sub-paths where mutations must be authenticated.
+ * GET /api/trips is intentionally public — the delegate portal and display
+ * board poll it without a session.  Only POST/PATCH/DELETE actions need a token.
+ */
 const PROTECTED_API_PATHS = ["/api/trips"];
 
 /**
@@ -62,9 +67,14 @@ export function proxy(request: NextRequest) {
   const isProtectedPage = PROTECTED_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
-  const isProtectedApi = PROTECTED_API_PATHS.some((path) =>
-    pathname.startsWith(path),
-  );
+  // GET requests to /api/trips are public (delegate portal + display board poll).
+  // Only protect mutating methods (POST, PATCH, DELETE) on the trips API.
+  const method = request.method.toUpperCase();
+  const isReadOnlyApiRequest =
+    method === "GET" || method === "HEAD" || method === "OPTIONS";
+  const isProtectedApi =
+    !isReadOnlyApiRequest &&
+    PROTECTED_API_PATHS.some((path) => pathname.startsWith(path));
 
   if (!isProtectedPage && !isProtectedApi) {
     return NextResponse.next();
