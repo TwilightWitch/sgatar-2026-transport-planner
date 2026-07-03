@@ -113,7 +113,7 @@ function applyMode(mode: ThemeMode) {
  * Falls back to `localStorage` then `'light'`.
  */
 function detectCurrentMode(): ThemeMode {
-  if (typeof window === "undefined") return "light";
+  if (typeof globalThis.window === "undefined") return "light";
   const html = document.documentElement;
   for (const [id, cls] of Object.entries(MODE_CLASS) as [ThemeMode, string][]) {
     if (cls && html.classList.contains(cls)) return id;
@@ -233,7 +233,7 @@ export function ThemeToggle() {
           </ul>
 
           <div className="border-t border-gray-100 px-4 py-2 dark:border-gray-800">
-            <p className="text-[10px] text-gray-400">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">
               Colorblind modes simulate dichromacy for accessibility testing.
             </p>
           </div>

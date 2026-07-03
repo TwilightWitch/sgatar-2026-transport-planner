@@ -21,6 +21,14 @@ import { useEffect, useRef, useState } from "react";
 
 interface HeadcountControlsProps {
   trip: TripWithRoute;
+  /**
+   * When provided the control runs in **draft mode**: every change calls
+   * {@link onDraftPaxChange} instead of immediately mutating the server.
+   * Used by {@link BusCard} to batch headcount + milestone under one Confirm.
+   */
+  draftPax?: number;
+  /** Required when `draftPax` is provided. */
+  onDraftPaxChange?: (pax: number) => void;
 }
 
 function getStatusColor(ratio: number): string {
@@ -35,11 +43,19 @@ function getBarColor(ratio: number): string {
   return "bg-emerald-500";
 }
 
-export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
+export function HeadcountControls({
+  trip,
+  draftPax,
+  onDraftPaxChange,
+}: Readonly<HeadcountControlsProps>) {
   const { t } = useI18n();
   const updateHeadcount = useUpdateHeadcount();
   const [textInput, setTextInput] = useState("");
   const [editingText, setEditingText] = useState(false);
+
+  // In draft mode, the displayed pax is driven by the parent.
+  // In uncontrolled mode it comes from the server via trip.currentPax.
+  const displayPax = draftPax ?? trip.currentPax;
 
   // ── Slider local state ───────────────────────────────────────────────────
   // The slider uses its own local value so that rapid dragging doesn't fire
@@ -49,23 +65,29 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
   const [sliderValue, setSliderValue] = useState(trip.currentPax);
   const isDragging = useRef(false);
 
-  // Keep slider in sync with server when not being dragged
+  // Keep slider in sync with the effective displayed pax (draft or server)
   useEffect(() => {
     if (!isDragging.current) {
-      setSliderValue(trip.currentPax);
+      setSliderValue(displayPax);
     }
-  }, [trip.currentPax]);
+  }, [displayPax]);
 
   const clamp = (v: number) => Math.min(Math.max(0, v), trip.maxCapacity);
 
   const commit = (newPax: number) => {
     const clamped = clamp(newPax);
-    setSliderValue(clamped); // keep slider in sync with button/text commits
-    updateHeadcount.mutate({ tripId: trip.id, currentPax: clamped });
+    if (onDraftPaxChange) {
+      // Draft mode: notify parent, keep slider in sync
+      onDraftPaxChange(clamped);
+      setSliderValue(clamped);
+    } else {
+      setSliderValue(clamped);
+      updateHeadcount.mutate({ tripId: trip.id, currentPax: clamped });
+    }
   };
 
-  const handleIncrement = () => commit(trip.currentPax + 1);
-  const handleDecrement = () => commit(trip.currentPax - 1);
+  const handleIncrement = () => commit(displayPax + 1);
+  const handleDecrement = () => commit(displayPax - 1);
 
   // Slider: update local display only while dragging
   const handleSliderChange = (e: { target: HTMLInputElement }) => {
@@ -83,7 +105,7 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
   };
 
   const handleTextFocus = () => {
-    setTextInput(String(trip.currentPax));
+    setTextInput(String(displayPax));
     setEditingText(true);
   };
 
@@ -106,40 +128,36 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
     }
   };
 
-  const fillRatio =
-    trip.maxCapacity > 0 ? trip.currentPax / trip.maxCapacity : 0;
+  const fillRatio = trip.maxCapacity > 0 ? displayPax / trip.maxCapacity : 0;
   const fillPercent = Math.min(Math.round(fillRatio * 100), 100);
 
   return (
-    <article
-      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900"
-      aria-label={`${t.headcount} - ${trip.busIdentifier}`}
-    >
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {trip.busIdentifier}
-        </h3>
-        <span className={`text-xl font-bold ${getStatusColor(fillRatio)}`}>
-          {trip.currentPax}/{trip.maxCapacity}
-        </span>
-      </div>
-
-      <p className="mb-3 truncate text-xs text-gray-500 dark:text-gray-400">
-        {trip.pickupLocation} → {trip.dropoffLocation}
-      </p>
+    <div aria-label={`${t.headcount} - ${trip.busIdentifier}`}>
+      {/* Show card chrome only in standalone (non-draft) mode; BusCard provides its own header */}
+      {!onDraftPaxChange && (
+        <>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {trip.busIdentifier}
+            </h3>
+            <span className={`text-xl font-bold ${getStatusColor(fillRatio)}`}>
+              {displayPax}/{trip.maxCapacity}
+            </span>
+          </div>
+          <p className="mb-3 truncate text-xs text-gray-500 dark:text-gray-400">
+            {trip.pickupLocation} → {trip.dropoffLocation}
+          </p>
+        </>
+      )}
 
       {/* Capacity bar */}
-      <progress
-        className="mb-1 h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-gray-200 dark:[&::-webkit-progress-bar]:bg-gray-700 [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:transition-all"
-        value={fillPercent}
-        max={100}
-        aria-label={`${t.capacity}: ${fillPercent}%`}
-      >
-        {fillPercent}%
-      </progress>
       <div
+        role="progressbar"
+        aria-valuenow={fillPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${t.capacity}: ${fillPercent}%`}
         className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
-        aria-hidden="true"
       >
         <div
           className={`h-full rounded-full transition-all ${getBarColor(fillRatio)}`}
@@ -152,7 +170,7 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
         <button
           type="button"
           onClick={handleDecrement}
-          disabled={trip.currentPax <= 0}
+          disabled={displayPax <= 0}
           aria-label={t.removePassenger}
           className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-red-300 bg-red-50 text-red-600 transition-colors hover:bg-red-100 active:bg-red-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-700 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
         >
@@ -177,17 +195,17 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
             type="button"
             onClick={handleTextFocus}
             title="Tap to type a number"
-            aria-label={`${trip.currentPax} passengers — tap to type a value`}
+            aria-label={`${displayPax} passengers — tap to type a value`}
             className="min-w-[3rem] rounded-lg px-2 py-1 text-3xl font-bold text-gray-900 hover:bg-gray-100 active:bg-gray-200 dark:text-white dark:hover:bg-gray-800"
           >
-            <span aria-live="polite">{trip.currentPax}</span>
+            <span aria-live="polite">{displayPax}</span>
           </button>
         )}
 
         <button
           type="button"
           onClick={handleIncrement}
-          disabled={trip.currentPax >= trip.maxCapacity}
+          disabled={displayPax >= trip.maxCapacity}
           aria-label={t.addPassenger}
           className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-emerald-300 bg-emerald-50 text-emerald-600 transition-colors hover:bg-emerald-100 active:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 dark:hover:bg-emerald-900"
         >
@@ -219,6 +237,6 @@ export function HeadcountControls({ trip }: Readonly<HeadcountControlsProps>) {
           className="w-full accent-brand-600"
         />
       </div>
-    </article>
+    </div>
   );
 }

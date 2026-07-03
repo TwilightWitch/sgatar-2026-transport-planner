@@ -1,45 +1,85 @@
 "use client";
 
-import { HeadcountControls } from "@/components/HeadcountControls";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { MilestoneTracker } from "@/components/lo/MilestoneTracker";
+import { BusCard } from "@/components/lo/BusCard";
+import { TripFilters, type StatusFilter } from "@/components/lo/TripFilters";
 import { QuickGuide } from "@/components/QuickGuide";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SosButton } from "@/components/SosButton";
-import { useActiveTrips } from "@/hooks/useLiveFleet";
+import { useActiveTrips, type TripWithRoute } from "@/hooks/useLiveFleet";
 import { useI18n } from "@/lib/i18n/provider";
 import { useState } from "react";
+
+// ── Filter logic (pure functions, easy to unit-test) ──────────────────────────
+
+/**
+ * Applies the status dropdown filter to a list of trips.
+ * `"active"` excludes completed; the others match the exact DB status string.
+ */
+function applyStatusFilter(
+  trips: TripWithRoute[],
+  filter: StatusFilter,
+): TripWithRoute[] {
+  if (filter === "all") return trips;
+  if (filter === "active") return trips.filter((t) => t.status !== "completed");
+  return trips.filter((t) => t.status === filter);
+}
+
+/**
+ * Case-insensitive substring search across service name, bus ID, and route.
+ * Returns the original array unchanged when the query is blank.
+ */
+function applySearch(trips: TripWithRoute[], query: string): TripWithRoute[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return trips;
+  return trips.filter(
+    (t) =>
+      t.serviceName.toLowerCase().includes(q) ||
+      t.busIdentifier.toLowerCase().includes(q) ||
+      t.pickupLocation.toLowerCase().includes(q) ||
+      t.dropoffLocation.toLowerCase().includes(q),
+  );
+}
+
+/** Groups a flat trip list by `"conferenceDay: serviceName"` heading key. */
+function groupByService(
+  trips: TripWithRoute[],
+): Record<string, TripWithRoute[]> {
+  return trips.reduce<Record<string, TripWithRoute[]>>((acc, trip) => {
+    const key = `${trip.conferenceDay}: ${trip.serviceName}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(trip);
+    return acc;
+  }, {});
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LoPage() {
   const { data: trips, isLoading, error } = useActiveTrips();
   const { t } = useI18n();
-  const [filterDay, setFilterDay] = useState<string>("all");
 
-  const activeTrips =
-    trips?.filter((trip) => trip.status !== "completed") ?? [];
-  const days = [...new Set(activeTrips.map((tr) => tr.conferenceDay))];
-  const filtered =
+  const [filterDay, setFilterDay] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Build derived data — all filtering is stateless transforms on the cache
+  const allTrips = trips ?? [];
+  const days = [...new Set(allTrips.map((tr) => tr.conferenceDay))];
+
+  const byDay =
     filterDay === "all"
-      ? activeTrips
-      : activeTrips.filter((tr) => tr.conferenceDay === filterDay);
+      ? allTrips
+      : allTrips.filter((t) => t.conferenceDay === filterDay);
 
-  const grouped = filtered.reduce<Record<string, typeof filtered>>(
-    (acc, trip) => {
-      const key = `${trip.conferenceDay}: ${trip.serviceName}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(trip);
-      return acc;
-    },
-    {},
-  );
+  const byStatus = applyStatusFilter(byDay, statusFilter);
+  const filtered = applySearch(byStatus, searchQuery);
+  const grouped = groupByService(filtered);
 
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-gray-950">
-      <SiteHeader maxWidth="max-w-lg">
-        <span className="text-sm font-semibold text-brand-500">
-          Liaison Officer Portal
-        </span>
-      </SiteHeader>
+      {/* Header uses default max-w-4xl so logo + ThemeToggle + PortalNav
+          have full breathing room on desktop without overflow. */}
+      <SiteHeader />
 
       <main className="mx-auto max-w-lg space-y-4 px-4 py-4">
         <div className="flex justify-end">
@@ -52,9 +92,25 @@ export default function LoPage() {
             { icon: "➕", text: t.guideLoIncrement },
             { icon: "🔢", text: t.guideLoTypeCount },
             { icon: "↔️", text: t.guideLoSlider },
+            {
+              icon: "✅",
+              text: "Tap Confirm to save headcount and milestone changes.",
+            },
             { icon: "🔴", text: t.guideLoSos },
             { icon: "📶", text: t.guideLoOffline },
           ]}
+        />
+
+        <TripFilters
+          days={days}
+          selectedDay={filterDay}
+          onDayChange={setFilterDay}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          totalCount={allTrips.length}
+          filteredCount={filtered.length}
         />
 
         {isLoading && (
@@ -78,71 +134,25 @@ export default function LoPage() {
           </div>
         )}
 
-        {days.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setFilterDay("all")}
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                filterDay === "all"
-                  ? "bg-brand-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-              }`}
-            >
-              All Days
-            </button>
-            {days.map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setFilterDay(day)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  filterDay === day
-                    ? "bg-brand-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
-                }`}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {activeTrips.length === 0 && !isLoading && (
+        {filtered.length === 0 && !isLoading && (
           <div className="rounded-lg border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
-            No active trips assigned.
+            {allTrips.length === 0
+              ? "No active trips assigned."
+              : "No buses match the current filters."}
           </div>
         )}
 
         {Object.entries(grouped).map(([service, serviceTrips]) => (
           <details key={service} className="group" open>
-            <summary className="flex cursor-pointer items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+            <summary className="flex cursor-pointer items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-gray-800 dark:text-gray-200">
               <span>{service}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
                 {serviceTrips.length} bus{serviceTrips.length === 1 ? "" : "es"}
               </span>
             </summary>
             <div className="mt-2 space-y-3 pl-1">
               {serviceTrips.map((trip) => (
-                <div
-                  key={trip.id}
-                  className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900"
-                >
-                  {/* Bus identifier header */}
-                  <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                      {trip.busIdentifier}
-                    </span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {trip.pickupLocation} → {trip.dropoffLocation}
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    <MilestoneTracker trip={trip} />
-                    <HeadcountControls trip={trip} />
-                    <SosButton trip={trip} />
-                  </div>
-                </div>
+                <BusCard key={trip.id} trip={trip} />
               ))}
             </div>
           </details>

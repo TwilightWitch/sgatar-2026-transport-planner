@@ -37,7 +37,9 @@ export function PortalNav() {
           className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             isActive(item.href)
               ? "bg-brand-500 text-white"
-              : "text-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:text-brand-300 dark:hover:bg-brand-900 dark:hover:text-white"
+              : // inactive: brand-400 (#3d56a0) on white = 6.3:1 AA ✓
+                // dark inactive: gray-200 (#e5e7eb) on gray-900 (#111827) = 13:1 AAA ✓
+                "text-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white"
           }`}
         >
           {item.label}
