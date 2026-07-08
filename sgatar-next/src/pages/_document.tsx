@@ -15,7 +15,10 @@ import { Head, Html, Main, NextScript } from "next/document";
 /** Inline script source — must be pure JS with no template literals or
  *  modern syntax to survive Next.js's script inlining. */
 const THEME_INIT_SCRIPT = `(function(){try{
-  var m=localStorage.getItem('sgatar-theme')||'light';
+  var m=localStorage.getItem('sgatar-theme');
+  if(!m){
+    m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  }
   var h=document.documentElement;
   h.className='';
   if(m==='dark')h.classList.add('dark');
@@ -41,7 +44,6 @@ export default function Document() {
          * Anti-flash theme initialisation — runs synchronously before first
          * paint so the user never sees a white flash when dark/CB mode is set.
          */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 
         {/*

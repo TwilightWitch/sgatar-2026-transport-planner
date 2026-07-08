@@ -1035,6 +1035,8 @@ export function getStaticTrips(): TripWithRoute[] {
     scheduledArrival: row.arv,
     driverName: null,
     driverPhone: null,
+    loName: null,
+    loPhone: null,
     plateNumber: null,
     assignedDelegations: null,
     routeType: "shuttle" as const,

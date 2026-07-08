@@ -67,7 +67,7 @@ export function MilestoneTracker({
       {/* Delegation badges */}
       {trip.assignedDelegations?.length ? (
         <div className="flex flex-wrap gap-1" aria-label="Assigned delegations">
-          {trip.assignedDelegations.map((code) => (
+          {trip.assignedDelegations.map((code: string) => (
             <span
               key={code}
               className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
@@ -96,7 +96,7 @@ export function MilestoneTracker({
 
       {/* Status pills */}
       <div
-        role="group"
+        role="radiogroup"
         aria-label="Trip status"
         aria-live="polite"
         className="flex flex-wrap gap-1.5"
@@ -125,4 +125,3 @@ export function MilestoneTracker({
     </div>
   );
 }
-3

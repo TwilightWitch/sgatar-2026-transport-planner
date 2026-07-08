@@ -10,7 +10,9 @@
  */
 import { PersonalizedFleet } from "@/components/delegate/PersonalizedFleet";
 import {
+  useActiveTrips,
   useDelegateFleet,
+  useDeleteTrip,
   useUpdateHeadcount,
   type TripWithRoute,
 } from "@/hooks/useLiveFleet";
@@ -47,6 +49,8 @@ function makeTrip(overrides: Partial<TripWithRoute> = {}): TripWithRoute {
     isAdhoc: false,
     driverName: null,
     driverPhone: null,
+    loName: null,
+    loPhone: null,
     plateNumber: null,
     assignedDelegations: null,
     conferenceDay: "8 Sep (Tue)",
@@ -229,6 +233,43 @@ describe("useDelegateFleet", () => {
   });
 });
 
+describe("useActiveTrips sorting", () => {
+  it("sorts by scheduledDeparture then busIdentifier", async () => {
+    const queryClient = createTestQueryClient();
+
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          makeTrip({
+            id: "3",
+            scheduledDeparture: "09:00",
+            busIdentifier: "Bus C",
+          }),
+          makeTrip({
+            id: "2",
+            scheduledDeparture: "08:00",
+            busIdentifier: "Bus B",
+          }),
+          makeTrip({
+            id: "1",
+            scheduledDeparture: "08:00",
+            busIdentifier: "Bus A",
+          }),
+        ]),
+    } as Response);
+
+    const { result } = renderHook(() => useActiveTrips(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const orderedIds = result.current.data?.map((trip) => trip.id);
+    expect(orderedIds).toEqual(["1", "2", "3"]);
+  });
+});
+
 // ── useUpdateHeadcount — optimistic UI rollback ───────────────────────────────
 
 describe("useUpdateHeadcount optimistic rollback", () => {
@@ -362,6 +403,68 @@ describe("useUpdateHeadcount optimistic rollback", () => {
   });
 });
 
+describe("useDeleteTrip optimistic removal", () => {
+  it("removes a trip from cache before server response", async () => {
+    const queryClient = createTestQueryClient();
+    const fetchMock = vi.mocked(globalThis.fetch);
+
+    queryClient.setQueryData(
+      ["activeTrips"],
+      [makeTrip({ id: "trip-1" }), makeTrip({ id: "trip-2" })],
+    );
+
+    let resolveDelete!: () => void;
+    const pendingDelete = new Promise<void>((resolve) => {
+      resolveDelete = resolve;
+    });
+
+    fetchMock.mockImplementation(
+      (input: RequestInfo | URL, init?: RequestInit) => {
+        let url: string;
+        if (typeof input === "string") {
+          url = input;
+        } else if (input instanceof URL) {
+          url = input.href;
+        } else {
+          url = input.url;
+        }
+        if (url.includes("/api/trips/trip-1") && init?.method === "DELETE") {
+          return pendingDelete.then(
+            () =>
+              ({
+                ok: true,
+                json: () => Promise.resolve({ success: true }),
+              }) as Response,
+          );
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([makeTrip({ id: "trip-2" })]),
+        } as Response);
+      },
+    );
+
+    const { result } = renderHook(() => useDeleteTrip(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    act(() => {
+      result.current.mutate("trip-1");
+    });
+
+    await waitFor(() => {
+      const cachedTrips = queryClient.getQueryData<TripWithRoute[]>([
+        "activeTrips",
+      ]);
+      const ids = cachedTrips?.map((trip) => trip.id);
+      expect(ids).toEqual(["trip-2"]);
+    });
+
+    resolveDelete();
+  });
+});
+
 // ── PersonalizedFleet component smoke test ────────────────────────────────────
 
 describe("PersonalizedFleet renders without crashing", () => {
@@ -373,17 +476,15 @@ describe("PersonalizedFleet renders without crashing", () => {
     } as Response);
 
     // Ensure localStorage is available in jsdom
-    if (globalThis.localStorage === undefined) {
-      Object.defineProperty(globalThis, "localStorage", {
-        value: {
-          getItem: vi.fn().mockReturnValue(null),
-          setItem: vi.fn(),
-          removeItem: vi.fn(),
-          clear: vi.fn(),
-        },
-        writable: true,
-      });
-    }
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: vi.fn().mockReturnValue(null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+      writable: true,
+    });
 
     const { getByLabelText } = await import("@testing-library/react").then(
       (m) => m,

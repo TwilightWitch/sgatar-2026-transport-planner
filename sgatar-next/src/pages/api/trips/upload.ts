@@ -101,6 +101,8 @@ function buildNewTrip(
     scheduledArrival: col(row, "scheduledarrival", "arv") || "TBC",
     driverName: col(row, "drivername", "driver") || null,
     driverPhone: col(row, "driverphone", "phone") || null,
+    loName: null,
+    loPhone: null,
     plateNumber: col(row, "platenumber", "plate") || null,
     assignedDelegations: null,
     routeType: "shuttle",
@@ -112,10 +114,10 @@ function buildNewTrip(
 
 const MAX_ROWS = 500;
 
-export default async function handler(
+export default function handler(
   req: NextApiRequest,
   res: NextApiResponse,
-): Promise<void> {
+): void {
   if (req.method !== "POST") {
     res.status(405).end("Method Not Allowed");
     return;
@@ -123,7 +125,7 @@ export default async function handler(
 
   try {
     const body = req.body as UploadBody;
-    const text = body?.csv;
+    const text = body.csv;
 
     if (!text || typeof text !== "string") {
       res.status(400).json({ error: "No CSV data provided" });

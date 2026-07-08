@@ -13,8 +13,9 @@
  */
 "use client";
 
+import { TripStepper } from "@/components/delegate/TripStepper";
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
-import { useDelegateFleet } from "@/hooks/useLiveFleet";
+import { useDayFilteredFleet } from "@/hooks/useLiveFleet";
 import { useEffect, useState } from "react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -89,6 +90,44 @@ function CountrySelector({
         {DELEGATE_COUNTRIES.map((c) => (
           <option key={c.code} value={c.code}>
             {c.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/**
+ * Conference day selector backed by the shared day-filtered hook.
+ */
+function DaySelector({
+  value,
+  days,
+  onChange,
+}: Readonly<{
+  value: string;
+  days: string[];
+  onChange: (day: string) => void;
+}>) {
+  return (
+    <div className="space-y-1">
+      <label
+        htmlFor="delegate-day"
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+      >
+        Conference day
+      </label>
+      <select
+        id="delegate-day"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+        aria-label="Select conference day"
+      >
+        <option value="">All days</option>
+        {days.map((day) => (
+          <option key={day} value={day}>
+            {day}
           </option>
         ))}
       </select>
@@ -247,6 +286,8 @@ function TripCard({ trip }: Readonly<{ trip: TripWithRoute }>) {
         </span>
       </div>
 
+      <TripStepper status={trip.status} />
+
       {/* Airport transfer details */}
       {isAirport && (
         <div className="mt-2 space-y-1 rounded-lg border border-sky-200 bg-sky-50 p-2 dark:border-sky-800 dark:bg-sky-950">
@@ -294,7 +335,7 @@ function TripCard({ trip }: Readonly<{ trip: TripWithRoute }>) {
  */
 export function PersonalizedFleet() {
   const [country, setCountry] = useState<string>(() => {
-    if (globalThis.window === undefined) return "";
+    if (!("window" in globalThis)) return "";
     try {
       return localStorage.getItem(LS_COUNTRY_KEY) ?? "";
     } catch {
@@ -302,8 +343,14 @@ export function PersonalizedFleet() {
     }
   });
   const [activeTab, setActiveTab] = useState<RouteTab>("shuttle");
+  const [selectedDay, setSelectedDay] = useState<string>("");
 
-  const { data: trips, isLoading, error } = useDelegateFleet(country || null);
+  const {
+    data: dayFilteredTrips,
+    availableDays,
+    isLoading,
+    error,
+  } = useDayFilteredFleet(selectedDay.length > 0 ? selectedDay : null);
 
   // Persist country selection
   useEffect(() => {
@@ -313,6 +360,16 @@ export function PersonalizedFleet() {
       // Storage unavailable — silently skip
     }
   }, [country]);
+
+  const trips = dayFilteredTrips?.filter((trip) => {
+    if (trip.status === "completed") return false;
+    if (!country) return true;
+
+    const assignedDelegationCodes = trip.assignedDelegations ?? [];
+    if (assignedDelegationCodes.length === 0) return true;
+
+    return assignedDelegationCodes.includes(country);
+  });
 
   const shuttleTrips =
     trips?.filter((t) => !t.routeType || t.routeType === "shuttle") ?? [];
@@ -331,6 +388,11 @@ export function PersonalizedFleet() {
       className="space-y-4"
     >
       <CountrySelector value={country} onChange={setCountry} />
+      <DaySelector
+        value={selectedDay}
+        days={availableDays}
+        onChange={setSelectedDay}
+      />
 
       <RouteTypeTabs
         active={activeTab}

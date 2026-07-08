@@ -39,6 +39,8 @@ export default async function handler(
           isAdhoc: activeTrips.isAdhoc,
           driverName: activeTrips.driverName,
           driverPhone: activeTrips.driverPhone,
+          loName: activeTrips.loName,
+          loPhone: activeTrips.loPhone,
           plateNumber: activeTrips.plateNumber,
           assignedDelegations: activeTrips.assignedDelegations,
           sosMessage: activeTrips.sosMessage,

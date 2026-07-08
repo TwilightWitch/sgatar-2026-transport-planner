@@ -37,14 +37,27 @@ interface PatchBody {
   targetArrival?: string;
   driverName?: string | null;
   driverPhone?: string | null;
+  loName?: string | null;
+  loPhone?: string | null;
   plateNumber?: string | null;
   assignedDelegations?: string[] | null;
+}
+
+function setIfDefined<T>(
+  target: Record<string, unknown>,
+  key: string,
+  value: T | undefined,
+): void {
+  if (value !== undefined) {
+    target[key] = value;
+  }
 }
 
 /** Builds the columns to update on `active_trips` from the validated patch body. */
 function buildDbUpdateData(body: PatchBody): Record<string, unknown> {
   const data: Record<string, unknown> = {};
-  if (body.currentPax !== undefined) data.currentPax = body.currentPax;
+
+  setIfDefined(data, "currentPax", body.currentPax);
   if (body.status !== undefined) {
     data.status = body.status;
     if (body.status === "departed_origin" || body.status === "en_route") {
@@ -54,18 +67,44 @@ function buildDbUpdateData(body: PatchBody): Record<string, unknown> {
       data.actualArrivalTime = new Date();
     }
   }
-  if (body.operationalNote !== undefined)
-    data.operationalNote = body.operationalNote;
-  if (body.isSos !== undefined) data.isSos = body.isSos;
-  if (body.sosMessage !== undefined) data.sosMessage = body.sosMessage;
-  if (body.assignedLoCount !== undefined)
-    data.assignedLoCount = body.assignedLoCount;
-  if (body.driverName !== undefined) data.driverName = body.driverName;
-  if (body.driverPhone !== undefined) data.driverPhone = body.driverPhone;
-  if (body.plateNumber !== undefined) data.plateNumber = body.plateNumber;
-  if (body.assignedDelegations !== undefined)
-    data.assignedDelegations = body.assignedDelegations;
+
+  setIfDefined(data, "operationalNote", body.operationalNote);
+  setIfDefined(data, "isSos", body.isSos);
+  setIfDefined(data, "sosMessage", body.sosMessage);
+  setIfDefined(data, "assignedLoCount", body.assignedLoCount);
+  setIfDefined(data, "driverName", body.driverName);
+  setIfDefined(data, "driverPhone", body.driverPhone);
+  setIfDefined(data, "loName", body.loName);
+  setIfDefined(data, "loPhone", body.loPhone);
+  setIfDefined(data, "plateNumber", body.plateNumber);
+  setIfDefined(data, "assignedDelegations", body.assignedDelegations);
+
   return data;
+}
+
+/** Deletes a trip row from the DB when a database connection is configured. */
+async function deleteViaDb(id: string, res: NextApiResponse): Promise<boolean> {
+  try {
+    const { db } = await import("@/db");
+    const { activeTrips } = await import("@/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const deletedRows = await db
+      .delete(activeTrips)
+      .where(eq(activeTrips.id, id))
+      .returning({ id: activeTrips.id });
+
+    if (deletedRows.length === 0) {
+      res.status(404).json({ error: "Trip not found" });
+      return true;
+    }
+
+    res.json({ success: true });
+    return true;
+  } catch (error) {
+    console.error("DELETE DB error, falling back to in-memory:", error);
+    return false;
+  }
 }
 
 /**
@@ -98,16 +137,18 @@ async function patchViaDb(
     }
 
     // 1. Update the trip row
-    const [updated] = await db
+    const updatedRows = await db
       .update(activeTrips)
       .set(updateData)
       .where(eq(activeTrips.id, id))
       .returning();
 
-    if (!updated) {
+    if (updatedRows.length === 0) {
       res.status(404).json({ error: "Trip not found" });
       return true;
     }
+
+    const updated = updatedRows[0];
 
     // 2. Append audit log — fire-and-forget, does not affect the response
     if (body.currentPax !== undefined) {
@@ -177,6 +218,11 @@ export default async function handler(
   }
 
   if (req.method === "DELETE") {
+    if (process.env.DATABASE_URL) {
+      const handled = await deleteViaDb(id, res);
+      if (handled) return;
+    }
+
     const deleted = deleteTrip(id);
     if (!deleted) {
       res.status(404).json({ error: "Trip not found" });

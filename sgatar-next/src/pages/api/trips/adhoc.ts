@@ -93,6 +93,8 @@ export default async function handler(
       scheduledArrival: "TBC",
       driverName: null,
       driverPhone: null,
+      loName: null,
+      loPhone: null,
       plateNumber: null,
       assignedDelegations: null,
       routeType: "shuttle",

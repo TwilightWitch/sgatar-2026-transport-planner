@@ -113,7 +113,7 @@ function applyMode(mode: ThemeMode) {
  * Falls back to `localStorage` then `'light'`.
  */
 function detectCurrentMode(): ThemeMode {
-  if (typeof globalThis.window === "undefined") return "light";
+  if (!("window" in globalThis)) return "light";
   const html = document.documentElement;
   for (const [id, cls] of Object.entries(MODE_CLASS) as [ThemeMode, string][]) {
     if (cls && html.classList.contains(cls)) return id;
@@ -124,6 +124,11 @@ function detectCurrentMode(): ThemeMode {
   } catch {
     // ignore
   }
+
+  if (globalThis.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
+
   return "light";
 }
 
@@ -185,7 +190,6 @@ export function ThemeToggle() {
       {open && (
         <div
           ref={panelRef}
-          role="listbox"
           aria-label="Display mode"
           className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
         >
@@ -202,8 +206,6 @@ export function ThemeToggle() {
                 <li key={mode.id}>
                   <button
                     type="button"
-                    role="option"
-                    aria-selected={isActive}
                     aria-pressed={isActive}
                     onClick={() => selectMode(mode.id)}
                     className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${

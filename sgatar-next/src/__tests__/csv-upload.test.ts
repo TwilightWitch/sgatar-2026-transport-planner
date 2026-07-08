@@ -79,7 +79,14 @@ describe("upload route integration (via tripStore)", () => {
       scheduledArrival: "09:50",
       driverName: "Alice",
       driverPhone: "91234567",
+      loName: null,
+      loPhone: null,
       plateNumber: "SG1234X",
+      assignedDelegations: null,
+      routeType: "shuttle",
+      flightNumber: null,
+      terminal: null,
+      pickupInstructions: null,
     };
     addTrip(newTrip);
     expect(getTrips().length).toBe(before + 1);

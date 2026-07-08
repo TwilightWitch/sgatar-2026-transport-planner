@@ -1,21 +1,13 @@
 /**
- * @file Live fleet data hooks.
+ * @file Live fleet and master route data hooks.
  *
- * Provides three React Query hooks consumed throughout the app:
- *
- * - {@link useActiveTrips}    — Polls `/api/trips` every 4 s and returns the
- *   full `TripWithRoute[]` list.  All portals share this single cached query.
- *
- * - {@link useUpdateHeadcount} — Mutation hook that PATCHes a single trip.  It
- *   applies an optimistic update immediately, rolls back on error, and queues
- *   changes in `localStorage` when the device is offline so they are replayed
- *   once connectivity is restored.
- *
- * - {@link useDelegateFleet} — Filtered view of `useActiveTrips` scoped to a
- *   delegate's country, or the general pool when no country is selected.
- *
- * Also exports the {@link TripWithRoute} shape that is the canonical data
- * contract between the API and all UI components.
+ * This module centralizes React Query contracts used by the LO, delegate,
+ * display, and admin portals:
+ * - `useActiveTrips` with deterministic cache ordering to prevent row flicker.
+ * - `useDayFilteredFleet` and `useDelegateFleet` derived selectors.
+ * - `useUpdateHeadcount` and `useDeleteTrip` optimistic trip mutations.
+ * - `useRoutes` plus `useCreateRoute` / `useUpdateRoute` / `useDeleteRoute`
+ *   for master schedule administration.
  */
 "use client";
 
@@ -28,10 +20,7 @@ import {
 import { useCallback, useEffect, useRef } from "react";
 
 /**
- * Canonical data contract between the `/api/trips` endpoint and all UI components.
- *
- * Combines fields from both `active_trips` and the joined `routes` row so every
- * consumer has a single, flat object to work with.
+ * Canonical data contract between `/api/trips` and all UI components.
  */
 export interface TripWithRoute {
   id: string;
@@ -40,7 +29,6 @@ export interface TripWithRoute {
   maxCapacity: number;
   currentPax: number;
   assignedLoCount: number;
-  /** Current milestone status of the trip lifecycle. */
   status:
     | "scheduled"
     | "boarding"
@@ -55,16 +43,12 @@ export interface TripWithRoute {
   isSos: boolean;
   sosMessage: string | null;
   isAdhoc: boolean;
-  // Driver / vehicle identity
   driverName: string | null;
   driverPhone: string | null;
+  loName: string | null;
+  loPhone: string | null;
   plateNumber: string | null;
-  /**
-   * ISO 3166-1 alpha-3 country codes bound to this trip.
-   * `null` or empty array means the trip is in the general delegate pool.
-   */
   assignedDelegations: string[] | null;
-  // Route / schedule fields joined from the `routes` table
   conferenceDay: string;
   serviceName: string;
   targetArrival: string;
@@ -72,28 +56,54 @@ export interface TripWithRoute {
   dropoffLocation: string;
   scheduledDeparture: string;
   scheduledArrival: string;
-  /**
-   * Discriminator for route category.
-   * - `'shuttle'`           — Regular conference shuttle between venues/hotels.
-   * - `'airport_arrival'`   — Airport pick-up run (delegates landing).
-   * - `'airport_departure'` — Airport drop-off run (delegates departing).
-   */
   routeType: "shuttle" | "airport_arrival" | "airport_departure" | null;
-  /** IATA flight number; populated for airport transfer routes only. */
   flightNumber: string | null;
-  /** Airport terminal identifier (e.g. "T3") for airport transfer routes. */
   terminal: string | null;
-  /** Human-readable wayfinding instruction shown to delegates. */
   pickupInstructions: string | null;
 }
 
-/** Payload sent to `PATCH /api/trips/[id]` by the LO portal. */
-interface HeadcountUpdate {
+/** Payload sent to `PATCH /api/trips/[id]`. */
+export interface HeadcountUpdate {
   tripId: string;
   currentPax: number;
   status?: TripWithRoute["status"];
   isSos?: boolean;
   sosMessage?: string | null;
+  loName?: string | null;
+  loPhone?: string | null;
+}
+
+/** Master schedule route returned by `/api/routes`. */
+export interface MasterRoute {
+  id: string;
+  conferenceDay: string;
+  serviceName: string;
+  targetArrival: string;
+  pickupLocation: string;
+  dropoffLocation: string;
+  scheduledDeparture: string;
+  scheduledArrival: string;
+  defaultCapacity: number;
+  routeType: string | null;
+  flightNumber: string | null;
+  terminal: string | null;
+  pickupInstructions: string | null;
+}
+
+/** Input shape accepted by create/update master route APIs. */
+export interface MasterRouteInput {
+  conferenceDay: string;
+  serviceName: string;
+  targetArrival: string;
+  pickupLocation: string;
+  dropoffLocation: string;
+  scheduledDeparture: string;
+  scheduledArrival: string;
+  defaultCapacity: number;
+  routeType?: string | null;
+  flightNumber?: string | null;
+  terminal?: string | null;
+  pickupInstructions?: string | null;
 }
 
 interface OfflineQueueEntry {
@@ -103,42 +113,67 @@ interface OfflineQueueEntry {
 }
 
 const TRIPS_QUERY_KEY = ["activeTrips"] as const;
+const ROUTES_QUERY_KEY = ["masterRoutes"] as const;
 const OFFLINE_QUEUE_KEY = "sgatar_offline_queue";
 
+/**
+ * Deterministically sorts trips by departure then bus identifier.
+ *
+ * Applying this ordering in React Query's `select` ensures all subscribers see
+ * a stable order after polling and optimistic writes, preventing UI flicker.
+ */
+export function sortTripsDeterministically(
+  trips: readonly TripWithRoute[],
+): TripWithRoute[] {
+  return [...trips].sort((left, right) => {
+    const byDeparture = left.scheduledDeparture.localeCompare(
+      right.scheduledDeparture,
+    );
+    if (byDeparture !== 0) return byDeparture;
+
+    const byBus = left.busIdentifier.localeCompare(right.busIdentifier);
+    if (byBus !== 0) return byBus;
+
+    return left.id.localeCompare(right.id);
+  });
+}
+
 async function fetchTrips(): Promise<TripWithRoute[]> {
-  const res = await fetch("/api/trips", { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch trips: ${res.status}`);
+  const response = await fetch("/api/trips", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch trips: ${response.status}`);
   }
-  return res.json() as Promise<TripWithRoute[]>;
+  return response.json() as Promise<TripWithRoute[]>;
 }
 
 async function patchTrip(update: HeadcountUpdate): Promise<TripWithRoute> {
   const { tripId, ...body } = update;
-  const res = await fetch(`/api/trips/${tripId}`, {
+  const response = await fetch(`/api/trips/${tripId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    throw new Error(`Failed to update trip: ${res.status}`);
+  if (!response.ok) {
+    throw new Error(`Failed to update trip: ${response.status}`);
   }
-  return res.json() as Promise<TripWithRoute>;
+  return response.json() as Promise<TripWithRoute>;
+}
+
+async function deleteTripById(tripId: string): Promise<void> {
+  const response = await fetch(`/api/trips/${tripId}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Failed to delete trip: ${response.status}`);
+  }
 }
 
 /**
- * Polls `/api/trips` every 4 seconds and returns the current list of active
- * trips joined with their route metadata.
- *
- * - `staleTime: 2000` means window-focus refetches pick up fresh data quickly.
- * - `retry: 1` with `retryDelay: 1000` means a single transient failure is
- *   retried after 1 s (instead of the default exponential back-off), so the
- *   "Connection lost" banner clears within ~5 s rather than ~30 s.
+ * Polls `/api/trips` every 4 seconds and returns deterministically sorted data.
  */
 export function useActiveTrips() {
   return useQuery<TripWithRoute[]>({
     queryKey: TRIPS_QUERY_KEY,
     queryFn: fetchTrips,
+    select: (trips) => sortTripsDeterministically(trips),
     refetchInterval: 4000,
     staleTime: 2000,
     retry: 1,
@@ -146,8 +181,27 @@ export function useActiveTrips() {
   });
 }
 
+/**
+ * Returns a day-filtered view of the shared active fleet query.
+ */
+export function useDayFilteredFleet(selectedDay: string | null) {
+  const { data: trips, isLoading, error } = useActiveTrips();
+
+  const normalizedSelectedDay = selectedDay ?? "";
+  const data =
+    normalizedSelectedDay.length === 0
+      ? trips
+      : trips?.filter((trip) => trip.conferenceDay === normalizedSelectedDay);
+
+  const availableDays = [
+    ...new Set((trips ?? []).map((trip) => trip.conferenceDay)),
+  ];
+
+  return { data, availableDays, isLoading, error };
+}
+
 function getOfflineQueue(): OfflineQueueEntry[] {
-  if (globalThis.window === undefined) return [];
+  if (!("window" in globalThis)) return [];
   try {
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
     return raw ? (JSON.parse(raw) as OfflineQueueEntry[]) : [];
@@ -189,22 +243,12 @@ async function syncOfflineQueue(queryClient: QueryClient): Promise<void> {
 }
 
 /**
- * Mutation hook for updating a trip's headcount, status, or SOS flag.
- *
- * Behaviour:
- * - **Online**: PATCHes the server and invalidates the trip cache on settle.
- * - **Offline**: Serialises the update into `localStorage` and throws so the
- *   caller can display an offline indicator.  Updates are replayed in order
- *   when the `online` browser event fires.
- * - **Optimistic UI**: The cache is updated immediately so the LO sees the
- *   change without waiting for the round-trip.  A rollback is applied if the
- *   server returns an error.
+ * Optimistic mutation hook for headcount/status/SOS/LO updates.
  */
 export function useUpdateHeadcount() {
   const queryClient = useQueryClient();
   const syncingRef = useRef(false);
 
-  // Sync offline queue when browser comes online
   const handleOnline = useCallback(async () => {
     if (syncingRef.current) return;
     syncingRef.current = true;
@@ -219,11 +263,12 @@ export function useUpdateHeadcount() {
     const onlineHandler = () => {
       void handleOnline();
     };
+
     globalThis.addEventListener("online", onlineHandler);
-    // Attempt sync on mount in case we're already online with queued items
     if (navigator.onLine) {
       void handleOnline();
     }
+
     return () => globalThis.removeEventListener("online", onlineHandler);
   }, [handleOnline]);
 
@@ -246,15 +291,21 @@ export function useUpdateHeadcount() {
       const previousTrips =
         queryClient.getQueryData<TripWithRoute[]>(TRIPS_QUERY_KEY);
 
-      // Optimistic update
-      queryClient.setQueryData<TripWithRoute[]>(TRIPS_QUERY_KEY, (old) =>
-        old?.map((trip: TripWithRoute) =>
+      queryClient.setQueryData<TripWithRoute[]>(TRIPS_QUERY_KEY, (oldTrips) =>
+        oldTrips?.map((trip) =>
           trip.id === update.tripId
             ? {
                 ...trip,
                 currentPax: update.currentPax,
                 ...(update.status !== undefined && { status: update.status }),
                 ...(update.isSos !== undefined && { isSos: update.isSos }),
+                ...(update.sosMessage !== undefined && {
+                  sosMessage: update.sosMessage,
+                }),
+                ...(update.loName !== undefined && { loName: update.loName }),
+                ...(update.loPhone !== undefined && {
+                  loPhone: update.loPhone,
+                }),
               }
             : trip,
         ),
@@ -262,42 +313,54 @@ export function useUpdateHeadcount() {
 
       return { previousTrips };
     },
-    onError: (
-      _err: Error,
-      _update: HeadcountUpdate,
-      context: { previousTrips?: TripWithRoute[] } | undefined,
-    ) => {
-      // Rollback on error
+    onError: (_error, _update, context) => {
       if (context?.previousTrips) {
         queryClient.setQueryData(TRIPS_QUERY_KEY, context.previousTrips);
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_QUERY_KEY }).catch(() => {
-        // Will refetch on next interval
+        // Polling query retries automatically.
       });
     },
   });
 }
 
-// ── Delegate fleet hook ───────────────────────────────────────────────────────
+/**
+ * Removes an active trip with optimistic cache removal.
+ */
+export function useDeleteTrip() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string, { previousTrips?: TripWithRoute[] }>({
+    mutationFn: (tripId: string) => deleteTripById(tripId),
+    onMutate: async (tripId: string) => {
+      await queryClient.cancelQueries({ queryKey: TRIPS_QUERY_KEY });
+
+      const previousTrips =
+        queryClient.getQueryData<TripWithRoute[]>(TRIPS_QUERY_KEY);
+
+      queryClient.setQueryData<TripWithRoute[]>(TRIPS_QUERY_KEY, (oldTrips) =>
+        oldTrips?.filter((trip) => trip.id !== tripId),
+      );
+
+      return { previousTrips };
+    },
+    onError: (_error, _tripId, context) => {
+      if (context?.previousTrips) {
+        queryClient.setQueryData(TRIPS_QUERY_KEY, context.previousTrips);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: TRIPS_QUERY_KEY }).catch(() => {
+        // Polling query retries automatically.
+      });
+    },
+  });
+}
 
 /**
- * Returns a delegate-scoped view of the live fleet.
- *
- * Filtering logic (in order of precedence):
- * 1. If `delegateCountry` is `null` or empty, returns every non-completed trip
- *    (unfiltered general view).
- * 2. Otherwise returns trips whose `assignedDelegations` array either:
- *    - **includes** the `delegateCountry` code (personalised service), OR
- *    - is `null` / empty (general pool trip visible to all delegates).
- *
- * The result is a stable memoised derivation of the shared `useActiveTrips`
- * cache — no additional network requests are made.
- *
- * @param delegateCountry - ISO 3166-1 alpha-3 country code selected by the
- *   delegate, or `null` to show all trips.
- * @returns `{ data, isLoading, error }` mirroring the React Query shape.
+ * Returns delegate-scoped fleet data.
  */
 export function useDelegateFleet(delegateCountry: string | null) {
   const { data: trips, isLoading, error } = useActiveTrips();
@@ -305,11 +368,202 @@ export function useDelegateFleet(delegateCountry: string | null) {
   const data = trips?.filter((trip) => {
     if (trip.status === "completed") return false;
     if (!delegateCountry) return true;
+
     const hasDelegations =
       trip.assignedDelegations && trip.assignedDelegations.length > 0;
     if (!hasDelegations) return true;
+
     return trip.assignedDelegations?.includes(delegateCountry) ?? false;
   });
 
   return { data, isLoading, error };
+}
+
+async function fetchRoutes(): Promise<MasterRoute[]> {
+  const response = await fetch("/api/routes", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch routes: ${response.status}`);
+  }
+  return response.json() as Promise<MasterRoute[]>;
+}
+
+async function createRoute(payload: MasterRouteInput): Promise<MasterRoute> {
+  const response = await fetch("/api/routes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create route: ${response.status}`);
+  }
+
+  return response.json() as Promise<MasterRoute>;
+}
+
+async function updateRoute(
+  payload: { id: string } & Partial<MasterRouteInput>,
+): Promise<MasterRoute> {
+  const { id, ...patch } = payload;
+
+  const response = await fetch(`/api/routes/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update route: ${response.status}`);
+  }
+
+  return response.json() as Promise<MasterRoute>;
+}
+
+async function deleteRouteById(id: string): Promise<void> {
+  const response = await fetch(`/api/routes/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Failed to delete route: ${response.status}`);
+  }
+}
+
+/** Fetches all master routes for schedule administration. */
+export function useRoutes() {
+  return useQuery<MasterRoute[]>({
+    queryKey: ROUTES_QUERY_KEY,
+    queryFn: fetchRoutes,
+    staleTime: 5000,
+  });
+}
+
+/** Creates a master route with optimistic cache insertion. */
+export function useCreateRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    MasterRoute,
+    Error,
+    MasterRouteInput,
+    { previousRoutes?: MasterRoute[]; temporaryId: string }
+  >({
+    mutationFn: (payload) => createRoute(payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ROUTES_QUERY_KEY });
+      const previousRoutes =
+        queryClient.getQueryData<MasterRoute[]>(ROUTES_QUERY_KEY);
+
+      const temporaryId = `temp-route-${crypto.randomUUID()}`;
+      const optimisticRoute: MasterRoute = {
+        id: temporaryId,
+        conferenceDay: payload.conferenceDay,
+        serviceName: payload.serviceName,
+        targetArrival: payload.targetArrival,
+        pickupLocation: payload.pickupLocation,
+        dropoffLocation: payload.dropoffLocation,
+        scheduledDeparture: payload.scheduledDeparture,
+        scheduledArrival: payload.scheduledArrival,
+        defaultCapacity: payload.defaultCapacity,
+        routeType: payload.routeType ?? "shuttle",
+        flightNumber: payload.flightNumber ?? null,
+        terminal: payload.terminal ?? null,
+        pickupInstructions: payload.pickupInstructions ?? null,
+      };
+
+      queryClient.setQueryData<MasterRoute[]>(ROUTES_QUERY_KEY, (oldRoutes) => [
+        ...(oldRoutes ?? []),
+        optimisticRoute,
+      ]);
+
+      return { previousRoutes, temporaryId };
+    },
+    onError: (_error, _payload, context) => {
+      if (context?.previousRoutes) {
+        queryClient.setQueryData(ROUTES_QUERY_KEY, context.previousRoutes);
+      }
+    },
+    onSuccess: (createdRoute, _payload, onMutateResult) => {
+      queryClient.setQueryData<MasterRoute[]>(ROUTES_QUERY_KEY, (oldRoutes) =>
+        (oldRoutes ?? []).map((route) =>
+          route.id === onMutateResult.temporaryId ? createdRoute : route,
+        ),
+      );
+    },
+    onSettled: () => {
+      queryClient
+        .invalidateQueries({ queryKey: ROUTES_QUERY_KEY })
+        .catch(() => {
+          // Query will refresh automatically.
+        });
+    },
+  });
+}
+
+/** Updates a master route with optimistic cache replacement. */
+export function useUpdateRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    MasterRoute,
+    Error,
+    { id: string } & Partial<MasterRouteInput>,
+    { previousRoutes?: MasterRoute[] }
+  >({
+    mutationFn: (payload) => updateRoute(payload),
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ROUTES_QUERY_KEY });
+      const previousRoutes =
+        queryClient.getQueryData<MasterRoute[]>(ROUTES_QUERY_KEY);
+
+      queryClient.setQueryData<MasterRoute[]>(ROUTES_QUERY_KEY, (oldRoutes) =>
+        (oldRoutes ?? []).map((route) =>
+          route.id === payload.id ? { ...route, ...payload } : route,
+        ),
+      );
+
+      return { previousRoutes };
+    },
+    onError: (_error, _payload, context) => {
+      if (context?.previousRoutes) {
+        queryClient.setQueryData(ROUTES_QUERY_KEY, context.previousRoutes);
+      }
+    },
+    onSettled: () => {
+      queryClient
+        .invalidateQueries({ queryKey: ROUTES_QUERY_KEY })
+        .catch(() => {
+          // Query will refresh automatically.
+        });
+    },
+  });
+}
+
+/** Deletes a master route with optimistic cache removal. */
+export function useDeleteRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string, { previousRoutes?: MasterRoute[] }>({
+    mutationFn: (id) => deleteRouteById(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ROUTES_QUERY_KEY });
+      const previousRoutes =
+        queryClient.getQueryData<MasterRoute[]>(ROUTES_QUERY_KEY);
+
+      queryClient.setQueryData<MasterRoute[]>(ROUTES_QUERY_KEY, (oldRoutes) =>
+        (oldRoutes ?? []).filter((route) => route.id !== id),
+      );
+
+      return { previousRoutes };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousRoutes) {
+        queryClient.setQueryData(ROUTES_QUERY_KEY, context.previousRoutes);
+      }
+    },
+    onSettled: () => {
+      queryClient
+        .invalidateQueries({ queryKey: ROUTES_QUERY_KEY })
+        .catch(() => {
+          // Query will refresh automatically.
+        });
+    },
+  });
 }

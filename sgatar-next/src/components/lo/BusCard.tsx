@@ -23,7 +23,7 @@ import { HeadcountControls } from "@/components/HeadcountControls";
 import { MilestoneTracker } from "@/components/lo/MilestoneTracker";
 import { SosButton } from "@/components/SosButton";
 import { useUpdateHeadcount, type TripWithRoute } from "@/hooks/useLiveFleet";
-import { Check, RotateCcw } from "lucide-react";
+import { Check, MessageCircle, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 /** Props for {@link BusCard}. */
@@ -56,8 +56,14 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
 
   const [draftPax, setDraftPax] = useState(trip.currentPax);
   const [draftStatus, setDraftStatus] = useState(trip.status);
+  const [draftLoName, setDraftLoName] = useState(trip.loName ?? "");
+  const [draftLoPhone, setDraftLoPhone] = useState(trip.loPhone ?? "");
 
-  const isDirty = draftPax !== trip.currentPax || draftStatus !== trip.status;
+  const isDirty =
+    draftPax !== trip.currentPax ||
+    draftStatus !== trip.status ||
+    draftLoName !== (trip.loName ?? "") ||
+    draftLoPhone !== (trip.loPhone ?? "");
 
   // Sync draft with server only when no edits are pending
   const isDirtyRef = useRef(isDirty);
@@ -67,20 +73,26 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
     if (!isDirtyRef.current) {
       setDraftPax(trip.currentPax);
       setDraftStatus(trip.status);
+      setDraftLoName(trip.loName ?? "");
+      setDraftLoPhone(trip.loPhone ?? "");
     }
-  }, [trip.currentPax, trip.status]);
+  }, [trip.currentPax, trip.loName, trip.loPhone, trip.status]);
 
   function handleConfirm() {
     updateHeadcount.mutate({
       tripId: trip.id,
       currentPax: draftPax,
       status: draftStatus,
+      loName: draftLoName || null,
+      loPhone: draftLoPhone || null,
     });
   }
 
   function handleDiscard() {
     setDraftPax(trip.currentPax);
     setDraftStatus(trip.status);
+    setDraftLoName(trip.loName ?? "");
+    setDraftLoPhone(trip.loPhone ?? "");
   }
 
   const ratio = fillRatio(draftPax, trip.maxCapacity);
@@ -110,6 +122,50 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
 
       {/* Controls */}
       <div className="space-y-3 p-4">
+        {trip.driverPhone && (
+          <a
+            href={`https://wa.me/${trip.driverPhone.replace(/[^\d]/g, "")}`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Message driver ${trip.driverName ?? "on WhatsApp"}`}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 transition-colors hover:bg-green-100 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300 dark:hover:bg-green-900/50"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            Message Driver
+          </a>
+        )}
+
+        <fieldset className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+            Liaison Officer Assignment
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-200">
+              <span>LO Name</span>
+              <input
+                type="text"
+                value={draftLoName}
+                onChange={(event) => setDraftLoName(event.target.value)}
+                className="min-h-[44px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                aria-label="Liaison officer name"
+                placeholder="Enter LO full name"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700 dark:text-gray-200">
+              <span>LO Phone</span>
+              <input
+                type="tel"
+                value={draftLoPhone}
+                onChange={(event) => setDraftLoPhone(event.target.value)}
+                className="min-h-[44px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                aria-label="Liaison officer phone"
+                placeholder="e.g. +65 9123 4567"
+              />
+            </label>
+          </div>
+        </fieldset>
+
         <MilestoneTracker
           trip={trip}
           draftStatus={draftStatus}

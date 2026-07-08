@@ -40,16 +40,21 @@ function applySearch(trips: TripWithRoute[], query: string): TripWithRoute[] {
   );
 }
 
-/** Groups a flat trip list by `"conferenceDay: serviceName"` heading key. */
-function groupByService(
+/**
+ * Groups trips by day and then by service name for compact nested accordions.
+ */
+function groupByDayAndService(
   trips: TripWithRoute[],
-): Record<string, TripWithRoute[]> {
-  return trips.reduce<Record<string, TripWithRoute[]>>((acc, trip) => {
-    const key = `${trip.conferenceDay}: ${trip.serviceName}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(trip);
-    return acc;
-  }, {});
+): Record<string, Record<string, TripWithRoute[]>> {
+  return trips.reduce<Record<string, Record<string, TripWithRoute[]>>>(
+    (acc, trip) => {
+      const dayGroups = (acc[trip.conferenceDay] ??= {});
+      const serviceTrips = (dayGroups[trip.serviceName] ??= []);
+      serviceTrips.push(trip);
+      return acc;
+    },
+    {},
+  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -73,7 +78,7 @@ export default function LoPage() {
 
   const byStatus = applyStatusFilter(byDay, statusFilter);
   const filtered = applySearch(byStatus, searchQuery);
-  const grouped = groupByService(filtered);
+  const grouped = groupByDayAndService(filtered);
 
   return (
     <div className="min-h-screen bg-cream-100 dark:bg-gray-950">
@@ -142,21 +147,48 @@ export default function LoPage() {
           </div>
         )}
 
-        {Object.entries(grouped).map(([service, serviceTrips]) => (
-          <details key={service} className="group" open>
-            <summary className="flex cursor-pointer items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-gray-800 dark:text-gray-200">
-              <span>{service}</span>
-              <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                {serviceTrips.length} bus{serviceTrips.length === 1 ? "" : "es"}
-              </span>
-            </summary>
-            <div className="mt-2 space-y-3 pl-1">
-              {serviceTrips.map((trip) => (
-                <BusCard key={trip.id} trip={trip} />
-              ))}
-            </div>
-          </details>
-        ))}
+        {Object.entries(grouped).map(([conferenceDay, services]) => {
+          const totalBuses = Object.values(services).reduce(
+            (count, dayTrips) => count + dayTrips.length,
+            0,
+          );
+
+          return (
+            <details
+              key={conferenceDay}
+              className="group rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+            >
+              <summary className="flex min-h-[44px] cursor-pointer items-center justify-between p-4 text-sm font-semibold text-slate-700 dark:text-gray-200">
+                <span>{conferenceDay}</span>
+                <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                  {totalBuses} bus{totalBuses === 1 ? "" : "es"}
+                </span>
+              </summary>
+
+              <div className="space-y-3 px-3 pb-3">
+                {Object.entries(services).map(([serviceName, serviceTrips]) => (
+                  <details
+                    key={`${conferenceDay}-${serviceName}`}
+                    className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50"
+                  >
+                    <summary className="flex min-h-[44px] cursor-pointer items-center justify-between p-4 text-sm font-semibold text-slate-700 dark:text-gray-200">
+                      <span>{serviceName}</span>
+                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                        {serviceTrips.length} bus
+                        {serviceTrips.length === 1 ? "" : "es"}
+                      </span>
+                    </summary>
+                    <div className="space-y-3 px-2 pb-3">
+                      {serviceTrips.map((trip) => (
+                        <BusCard key={trip.id} trip={trip} />
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </details>
+          );
+        })}
       </main>
     </div>
   );

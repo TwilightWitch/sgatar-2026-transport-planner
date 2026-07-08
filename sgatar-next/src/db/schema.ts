@@ -92,6 +92,10 @@ export const activeTrips = pgTable("active_trips", {
   driverName: varchar("driver_name", { length: 64 }),
   /** Contact phone number of the assigned driver. */
   driverPhone: varchar("driver_phone", { length: 32 }),
+  /** Name of the liaison officer currently assigned to this bus. */
+  loName: varchar("lo_name", { length: 64 }),
+  /** Phone number of the liaison officer currently assigned to this bus. */
+  loPhone: varchar("lo_phone", { length: 32 }),
   /** Vehicle registration plate displayed on LO and admin dashboards. */
   plateNumber: varchar("plate_number", { length: 16 }),
   /**
@@ -112,7 +116,7 @@ export const activeTrips = pgTable("active_trips", {
 export const headcountLogs = pgTable("headcount_logs", {
   id: serial("id").primaryKey(),
   tripId: uuid("trip_id")
-    .references(() => activeTrips.id)
+    .references(() => activeTrips.id, { onDelete: "cascade" })
     .notNull(),
   paxDelta: integer("pax_delta").notNull(),
   recordedPax: integer("recorded_pax").notNull(),

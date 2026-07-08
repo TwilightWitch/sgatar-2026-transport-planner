@@ -59,7 +59,7 @@ describe("tripStore", () => {
       const originalId = trips[0].id;
       const result = updateTrip(originalId, {
         id: "hacked",
-      } as Partial<TripWithRoute>);
+      });
       expect(result!.id).toBe(originalId);
     });
 
@@ -99,7 +99,14 @@ describe("tripStore", () => {
         scheduledArrival: "09:50",
         driverName: null,
         driverPhone: null,
+        loName: null,
+        loPhone: null,
         plateNumber: null,
+        assignedDelegations: null,
+        routeType: "shuttle",
+        flightNumber: null,
+        terminal: null,
+        pickupInstructions: null,
       };
       addTrip(newTrip);
       expect(getTrips().length).toBe(before + 1);

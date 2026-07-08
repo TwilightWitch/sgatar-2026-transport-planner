@@ -49,6 +49,8 @@ function makeTrip(overrides: Partial<TripWithRoute> = {}): TripWithRoute {
     isAdhoc: false,
     driverName: null,
     driverPhone: null,
+    loName: null,
+    loPhone: null,
     plateNumber: null,
     assignedDelegations: null,
     conferenceDay: "8 Sep (Tue)",
@@ -72,7 +74,7 @@ function makeQC() {
   });
 }
 
-function Wrapper({ children }: { children: ReactNode }) {
+function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <I18nProvider>
       <QueryClientProvider client={makeQC()}>{children}</QueryClientProvider>
@@ -242,7 +244,7 @@ describe("BusCard", () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([makeTrip()]),
-    } as Response);
+    });
   });
 
   afterEach(() => {

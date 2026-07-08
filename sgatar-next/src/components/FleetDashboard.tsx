@@ -14,8 +14,9 @@
 "use client";
 
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
+import { useDeleteTrip, useUpdateHeadcount } from "@/hooks/useLiveFleet";
 import { useI18n } from "@/lib/i18n/provider";
-import { AlertTriangle, Bus, CheckCircle, Clock } from "lucide-react";
+import { AlertTriangle, Bus, CheckCircle, Clock, Trash2 } from "lucide-react";
 
 interface FleetDashboardProps {
   trips: TripWithRoute[];
@@ -40,6 +41,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
   const { t } = useI18n();
+  const updateHeadcount = useUpdateHeadcount();
+  const deleteTrip = useDeleteTrip();
 
   const sosTrips = trips.filter((trip) => trip.isSos);
   const activeTrips = trips.filter((trip) => trip.status !== "completed");
@@ -49,6 +52,23 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
   const completedCount = trips.filter(
     (trip) => trip.status === "completed",
   ).length;
+
+  function handleClearSos(trip: TripWithRoute) {
+    updateHeadcount.mutate({
+      tripId: trip.id,
+      currentPax: trip.currentPax,
+      isSos: false,
+      sosMessage: null,
+    });
+  }
+
+  function handleDeleteTrip(trip: TripWithRoute) {
+    const confirmed = globalThis.window.confirm(
+      `Delete active trip ${trip.busIdentifier} (${trip.serviceName})? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+    deleteTrip.mutate(trip.id);
+  }
 
   return (
     <section aria-label={t.fleetDashboard}>
@@ -160,7 +180,7 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                 scope="col"
                 className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
               >
-                Service
+                Service / Contacts
               </th>
               <th
                 scope="col"
@@ -180,6 +200,12 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
               >
                 Flags
               </th>
+              <th
+                scope="col"
+                className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -198,7 +224,17 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                   {trip.busIdentifier}
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                  {trip.serviceName}
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {trip.serviceName}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Driver: {trip.driverName ?? "-"}{" "}
+                    {trip.driverPhone ? `(${trip.driverPhone})` : ""}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    LO: {trip.loName ?? "-"}{" "}
+                    {trip.loPhone ? `(${trip.loPhone})` : ""}
+                  </p>
                 </td>
                 <td className="px-4 py-3">
                   <span
@@ -227,6 +263,29 @@ export function FleetDashboard({ trips }: Readonly<FleetDashboardProps>) {
                       Ad-hoc
                     </span>
                   )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {trip.isSos && (
+                      <button
+                        type="button"
+                        onClick={() => handleClearSos(trip)}
+                        className="min-h-[44px] rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                        aria-label={`Clear SOS for ${trip.busIdentifier}`}
+                      >
+                        Clear SOS
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTrip(trip)}
+                      className="inline-flex min-h-[44px] items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+                      aria-label={`Delete trip ${trip.busIdentifier}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

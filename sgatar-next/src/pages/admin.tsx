@@ -104,7 +104,7 @@ export default function AdminPage() {
                 </span>
               </summary>
               <div className="mt-3">
-                <ScheduleEditor trips={trips} onUpdated={handleRefresh} />
+                <ScheduleEditor />
               </div>
             </details>
 
