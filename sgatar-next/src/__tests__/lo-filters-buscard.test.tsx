@@ -44,6 +44,7 @@ function makeTrip(overrides: Partial<TripWithRoute> = {}): TripWithRoute {
     actualDepartureTime: null,
     actualArrivalTime: null,
     operationalNote: null,
+    delegateNotice: null,
     isSos: false,
     sosMessage: null,
     isAdhoc: false,
@@ -90,7 +91,6 @@ type SF = StatusFilter;
 
 function applyStatusFilter(trips: TripWithRoute[], f: SF): TripWithRoute[] {
   if (f === "all") return trips;
-  if (f === "active") return trips.filter((t) => t.status !== "completed");
   return trips.filter((t) => t.status === f);
 }
 
@@ -114,9 +114,9 @@ describe("applyStatusFilter", () => {
     makeTrip({ id: "d", status: "completed" }),
   ];
 
-  it("active excludes completed", () => {
-    const r = applyStatusFilter(trips, "active");
-    expect(r.map((t) => t.id)).toEqual(["a", "b", "c"]);
+  it("completed filters to completed only", () => {
+    const r = applyStatusFilter(trips, "completed");
+    expect(r.map((t) => t.id)).toEqual(["d"]);
   });
 
   it("all returns every trip", () => {
@@ -179,7 +179,7 @@ describe("TripFilters", () => {
     days: ["8 Sep (Tue)", "9 Sep (Wed)"],
     selectedDay: "all",
     onDayChange: vi.fn(),
-    statusFilter: "active" as SF,
+    statusFilter: "all" as SF,
     onStatusFilterChange: vi.fn(),
     searchQuery: "",
     onSearchChange: vi.fn(),

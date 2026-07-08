@@ -57,6 +57,7 @@ export default async function handler(
             assignedLoCount: 1,
             status: "scheduled",
             operationalNote: body.operationalNote ?? "Ad-hoc ghost bus",
+            delegateNotice: null,
             isSos: false,
             isAdhoc: true,
           })
@@ -81,6 +82,7 @@ export default async function handler(
       actualDepartureTime: null,
       actualArrivalTime: null,
       operationalNote: body.operationalNote ?? "Ad-hoc ghost bus",
+      delegateNotice: null,
       isSos: false,
       sosMessage: null,
       isAdhoc: true,

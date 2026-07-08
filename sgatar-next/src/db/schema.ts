@@ -86,6 +86,8 @@ export const activeTrips = pgTable("active_trips", {
   actualDepartureTime: timestamp("actual_departure_time"),
   actualArrivalTime: timestamp("actual_arrival_time"),
   operationalNote: text("operational_note"),
+  /** Public-facing delegate broadcast message for this trip. */
+  delegateNotice: text("delegate_notice"),
   isSos: boolean("is_sos").default(false).notNull(),
   isAdhoc: boolean("is_adhoc").default(false).notNull(),
   /** Name of the assigned driver for LO reference. */

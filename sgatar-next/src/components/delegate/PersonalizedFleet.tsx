@@ -16,6 +16,7 @@
 import { TripStepper } from "@/components/delegate/TripStepper";
 import type { TripWithRoute } from "@/hooks/useLiveFleet";
 import { useDayFilteredFleet } from "@/hooks/useLiveFleet";
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -218,7 +219,7 @@ function TripCard({ trip }: Readonly<{ trip: TripWithRoute }>) {
     boarding:
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200",
     departed_origin:
-      "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200",
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200",
     en_route:
       "bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-200",
     delayed:
@@ -287,6 +288,20 @@ function TripCard({ trip }: Readonly<{ trip: TripWithRoute }>) {
       </div>
 
       <TripStepper status={trip.status} />
+
+      {trip.delegateNotice && (
+        <div className="mt-2 min-w-0 rounded-lg border border-yellow-200 bg-yellow-50 px-2.5 py-2 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+          <p className="inline-flex min-h-[44px] items-start gap-2 text-xs font-medium">
+            <AlertTriangle
+              className="mt-0.5 h-4 w-4 shrink-0"
+              aria-hidden="true"
+            />
+            <span className="break-words whitespace-normal">
+              {trip.delegateNotice}
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* Airport transfer details */}
       {isAirport && (

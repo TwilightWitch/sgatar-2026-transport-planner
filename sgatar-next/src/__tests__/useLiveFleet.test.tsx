@@ -10,7 +10,9 @@
  */
 import { PersonalizedFleet } from "@/components/delegate/PersonalizedFleet";
 import {
+  shouldHideTripFromLiveDisplay,
   useActiveTrips,
+  useDayFilteredFleet,
   useDelegateFleet,
   useDeleteTrip,
   useUpdateHeadcount,
@@ -44,6 +46,7 @@ function makeTrip(overrides: Partial<TripWithRoute> = {}): TripWithRoute {
     actualDepartureTime: null,
     actualArrivalTime: null,
     operationalNote: null,
+    delegateNotice: null,
     isSos: false,
     sosMessage: null,
     isAdhoc: false,
@@ -83,7 +86,7 @@ function createTestQueryClient() {
 
 /** Wrapper component supplying React Query context to rendered hooks. */
 function createWrapper(queryClient: QueryClient) {
-  return function Wrapper({ children }: { children: ReactNode }) {
+  return function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
@@ -234,7 +237,7 @@ describe("useDelegateFleet", () => {
 });
 
 describe("useActiveTrips sorting", () => {
-  it("sorts by scheduledDeparture then busIdentifier", async () => {
+  it("applies SOS-first live sort tiers and keeps chronological order within groups", async () => {
     const queryClient = createTestQueryClient();
 
     vi.mocked(globalThis.fetch).mockResolvedValue({
@@ -242,19 +245,48 @@ describe("useActiveTrips sorting", () => {
       json: () =>
         Promise.resolve([
           makeTrip({
-            id: "3",
+            id: "finished-2",
+            status: "completed",
+            scheduledDeparture: "07:10",
+            scheduledArrival: "07:50",
+          }),
+          makeTrip({
+            id: "upcoming-2",
+            status: "scheduled",
+            scheduledDeparture: "08:20",
+          }),
+          makeTrip({
+            id: "active-2",
+            status: "delayed",
+            scheduledDeparture: "07:45",
+          }),
+          makeTrip({
+            id: "sos-2",
+            status: "scheduled",
+            isSos: true,
             scheduledDeparture: "09:00",
-            busIdentifier: "Bus C",
           }),
           makeTrip({
-            id: "2",
-            scheduledDeparture: "08:00",
-            busIdentifier: "Bus B",
+            id: "active-1",
+            status: "boarding",
+            scheduledDeparture: "07:30",
           }),
           makeTrip({
-            id: "1",
+            id: "finished-1",
+            status: "arrived_destination",
+            scheduledDeparture: "07:00",
+            scheduledArrival: "07:20",
+          }),
+          makeTrip({
+            id: "sos-1",
+            status: "en_route",
+            isSos: true,
+            scheduledDeparture: "08:50",
+          }),
+          makeTrip({
+            id: "upcoming-1",
+            status: "scheduled",
             scheduledDeparture: "08:00",
-            busIdentifier: "Bus A",
           }),
         ]),
     } as Response);
@@ -266,7 +298,115 @@ describe("useActiveTrips sorting", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     const orderedIds = result.current.data?.map((trip) => trip.id);
-    expect(orderedIds).toEqual(["1", "2", "3"]);
+    expect(orderedIds).toEqual([
+      "sos-1",
+      "sos-2",
+      "active-1",
+      "active-2",
+      "upcoming-1",
+      "upcoming-2",
+      "finished-1",
+      "finished-2",
+    ]);
+  });
+});
+
+describe("live display visibility policy", () => {
+  it("keeps scheduled and active trips visible", () => {
+    expect(
+      shouldHideTripFromLiveDisplay(
+        makeTrip({ status: "scheduled", scheduledArrival: "09:00" }),
+        new Date("2026-09-08T12:00:00"),
+      ),
+    ).toBe(false);
+
+    expect(
+      shouldHideTripFromLiveDisplay(
+        makeTrip({ status: "en_route", scheduledArrival: "09:00" }),
+        new Date("2026-09-08T12:00:00"),
+      ),
+    ).toBe(false);
+  });
+
+  it("hides only finished trips older than threshold", () => {
+    const now = new Date("2026-09-08T10:00:00");
+
+    expect(
+      shouldHideTripFromLiveDisplay(
+        makeTrip({ status: "completed", scheduledArrival: "08:20" }),
+        now,
+      ),
+    ).toBe(true);
+
+    expect(
+      shouldHideTripFromLiveDisplay(
+        makeTrip({ status: "arrived_destination", scheduledArrival: "09:10" }),
+        now,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("filtered hooks preserve live ordering", () => {
+  it("keeps tiered order in day-filtered and delegate-filtered views", async () => {
+    const queryClient = createTestQueryClient();
+
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          makeTrip({
+            id: "z-finished",
+            status: "completed",
+            scheduledDeparture: "07:00",
+            assignedDelegations: ["SGP"],
+          }),
+          makeTrip({
+            id: "a-sos",
+            status: "scheduled",
+            isSos: true,
+            scheduledDeparture: "09:00",
+            assignedDelegations: ["SGP"],
+          }),
+          makeTrip({
+            id: "b-active",
+            status: "boarding",
+            scheduledDeparture: "08:10",
+            assignedDelegations: ["SGP"],
+          }),
+          makeTrip({
+            id: "c-upcoming",
+            status: "scheduled",
+            scheduledDeparture: "08:30",
+            assignedDelegations: ["SGP"],
+          }),
+        ]),
+    } as Response);
+
+    const { result: dayResult } = renderHook(
+      () => useDayFilteredFleet("8 Sep (Tue)"),
+      { wrapper: createWrapper(queryClient) },
+    );
+    await waitFor(() => expect(dayResult.current.isLoading).toBe(false));
+    expect(dayResult.current.data?.map((trip) => trip.id)).toEqual([
+      "a-sos",
+      "b-active",
+      "c-upcoming",
+      "z-finished",
+    ]);
+
+    const { result: delegateResult } = renderHook(
+      () => useDelegateFleet("SGP"),
+      {
+        wrapper: createWrapper(queryClient),
+      },
+    );
+    await waitFor(() => expect(delegateResult.current.isLoading).toBe(false));
+    expect(delegateResult.current.data?.map((trip) => trip.id)).toEqual([
+      "a-sos",
+      "b-active",
+      "c-upcoming",
+    ]);
   });
 });
 
@@ -399,6 +539,44 @@ describe("useUpdateHeadcount optimistic rollback", () => {
     await waitFor(() => {
       const cached = queryClient.getQueryData<TripWithRoute[]>(["activeTrips"]);
       expect(cached?.[0]?.status).toBe("departed_origin");
+    });
+  });
+
+  it("optimistically applies delegateNotice updates to cached trip", async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/trips/")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              ...INITIAL_TRIP,
+              delegateNotice: "Pickup moved to Hall B due rain.",
+            }),
+        }) as Promise<Response>;
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([INITIAL_TRIP]),
+      }) as Promise<Response>;
+    });
+
+    const { result } = renderHook(() => useUpdateHeadcount(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    act(() => {
+      result.current.mutate({
+        tripId: "trip-1",
+        currentPax: 10,
+        delegateNotice: "Pickup moved to Hall B due rain.",
+      });
+    });
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<TripWithRoute[]>(["activeTrips"]);
+      expect(cached?.[0]?.delegateNotice).toBe(
+        "Pickup moved to Hall B due rain.",
+      );
     });
   });
 });

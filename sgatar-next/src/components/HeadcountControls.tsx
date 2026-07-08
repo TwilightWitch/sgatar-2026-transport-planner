@@ -37,10 +37,10 @@ function getStatusColor(ratio: number): string {
   return "text-emerald-600 dark:text-emerald-400";
 }
 
-function getBarColor(ratio: number): string {
-  if (ratio >= 1) return "bg-red-500";
-  if (ratio >= 0.8) return "bg-amber-500";
-  return "bg-emerald-500";
+function getCapacityAccentColor(ratio: number): string {
+  if (ratio >= 1) return "#dc2626";
+  if (ratio >= 0.8) return "#d97706";
+  return "#059669";
 }
 
 export function HeadcountControls({
@@ -130,6 +130,12 @@ export function HeadcountControls({
 
   const fillRatio = trip.maxCapacity > 0 ? displayPax / trip.maxCapacity : 0;
   const fillPercent = Math.min(Math.round(fillRatio * 100), 100);
+  const sliderColor = getCapacityAccentColor(fillRatio);
+  const sliderTrackStyle = {
+    color: sliderColor,
+    accentColor: sliderColor,
+    background: `linear-gradient(to right, ${sliderColor} 0%, ${sliderColor} ${fillPercent}%, rgb(229 231 235) ${fillPercent}%, rgb(229 231 235) 100%)`,
+  };
 
   return (
     <div aria-label={`${t.headcount} - ${trip.busIdentifier}`}>
@@ -149,21 +155,6 @@ export function HeadcountControls({
           </p>
         </>
       )}
-
-      {/* Capacity bar */}
-      <div
-        role="progressbar"
-        aria-valuenow={fillPercent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${t.capacity}: ${fillPercent}%`}
-        className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
-      >
-        <div
-          className={`h-full rounded-full transition-all ${getBarColor(fillRatio)}`}
-          style={{ width: `${fillPercent}%` }}
-        />
-      </div>
 
       {/* +/- buttons with tappable number display */}
       <div className="mb-4 flex items-center justify-center gap-4">
@@ -213,7 +204,7 @@ export function HeadcountControls({
         </button>
       </div>
 
-      {/* Slider for quick coarse adjustment */}
+      {/* Unified capacity slider for visual + interactive adjustment. */}
       <div>
         <label
           htmlFor={`slider-${trip.id}`}
@@ -234,7 +225,8 @@ export function HeadcountControls({
           onPointerUp={handleSliderCommit}
           onTouchEnd={handleSliderCommit}
           aria-label={`Passenger count: ${sliderValue} of ${trip.maxCapacity}`}
-          className="w-full accent-brand-600"
+          className="min-h-[44px] w-full cursor-pointer appearance-none rounded-full bg-transparent [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-webkit-slider-thumb]:mt-[-8px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md"
+          style={sliderTrackStyle}
         />
       </div>
     </div>

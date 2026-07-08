@@ -122,6 +122,39 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
 
       {/* Controls */}
       <div className="space-y-3 p-4">
+        {trip.isSos && trip.sosMessage && (
+          <div className="min-w-0 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+            <p className="break-words whitespace-normal">
+              SOS: {trip.sosMessage}
+            </p>
+          </div>
+        )}
+
+        {(trip.operationalNote || trip.delegateNotice) && (
+          <section className="min-w-0 space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+            {trip.operationalNote && (
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                  Internal Note
+                </p>
+                <p className="break-words whitespace-normal text-xs text-amber-900 dark:text-amber-100">
+                  {trip.operationalNote}
+                </p>
+              </div>
+            )}
+            {trip.delegateNotice && (
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                  Public Broadcast
+                </p>
+                <p className="break-words whitespace-normal text-xs text-amber-900 dark:text-amber-100">
+                  {trip.delegateNotice}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
         {trip.driverPhone && (
           <a
             href={`https://wa.me/${trip.driverPhone.replace(/[^\d]/g, "")}`}
@@ -195,7 +228,7 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
               type="button"
               onClick={handleDiscard}
               aria-label="Discard changes"
-              className="flex min-h-[36px] items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              className="flex min-h-[44px] items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               Discard
@@ -205,7 +238,7 @@ export function BusCard({ trip }: Readonly<BusCardProps>) {
               onClick={handleConfirm}
               disabled={updateHeadcount.isPending}
               aria-label="Confirm and save changes"
-              className="flex min-h-[36px] items-center gap-1 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+              className="flex min-h-[44px] items-center gap-1 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
             >
               <Check className="h-3.5 w-3.5" aria-hidden="true" />
               Confirm

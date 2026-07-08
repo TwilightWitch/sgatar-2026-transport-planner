@@ -35,6 +35,7 @@ export default async function handler(
           actualDepartureTime: activeTrips.actualDepartureTime,
           actualArrivalTime: activeTrips.actualArrivalTime,
           operationalNote: activeTrips.operationalNote,
+          delegateNotice: activeTrips.delegateNotice,
           isSos: activeTrips.isSos,
           isAdhoc: activeTrips.isAdhoc,
           driverName: activeTrips.driverName,

@@ -23,6 +23,7 @@ interface PatchBody {
   currentPax?: number;
   status?: string;
   operationalNote?: string;
+  delegateNotice?: string | null;
   isSos?: boolean;
   sosMessage?: string | null;
   assignedLoCount?: number;
@@ -69,6 +70,7 @@ function buildDbUpdateData(body: PatchBody): Record<string, unknown> {
   }
 
   setIfDefined(data, "operationalNote", body.operationalNote);
+  setIfDefined(data, "delegateNotice", body.delegateNotice);
   setIfDefined(data, "isSos", body.isSos);
   setIfDefined(data, "sosMessage", body.sosMessage);
   setIfDefined(data, "assignedLoCount", body.assignedLoCount);

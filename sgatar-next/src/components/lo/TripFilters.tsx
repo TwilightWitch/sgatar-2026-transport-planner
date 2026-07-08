@@ -18,9 +18,17 @@ import { Search, X } from "lucide-react";
 
 /**
  * Status filter values available in the dropdown.
- * `"active"` excludes completed trips; the others match the exact DB status.
+ * Values intentionally mirror backend status values to keep filtering explicit.
  */
-export type StatusFilter = "active" | "boarding" | "delayed" | "all";
+export type StatusFilter =
+  | "all"
+  | "scheduled"
+  | "boarding"
+  | "departed_origin"
+  | "en_route"
+  | "delayed"
+  | "arrived_destination"
+  | "completed";
 
 /** Props for {@link TripFilters}. */
 export interface TripFiltersProps {
@@ -39,10 +47,14 @@ export interface TripFiltersProps {
 }
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "all", label: "All statuses" },
+  { value: "all", label: "All Statuses" },
+  { value: "scheduled", label: "Scheduled" },
   { value: "boarding", label: "Boarding" },
+  { value: "departed_origin", label: "Departed Origin" },
+  { value: "en_route", label: "En Route" },
   { value: "delayed", label: "Delayed" },
+  { value: "arrived_destination", label: "Arrived Destination" },
+  { value: "completed", label: "Completed" },
 ];
 
 const CHIP_BASE =
@@ -69,7 +81,7 @@ export function TripFilters({
   filteredCount,
 }: Readonly<TripFiltersProps>) {
   const isFiltered =
-    selectedDay !== "all" || statusFilter !== "active" || searchQuery !== "";
+    selectedDay !== "all" || statusFilter !== "all" || searchQuery !== "";
 
   return (
     <section aria-label="Trip filters" className="space-y-2">
@@ -108,7 +120,7 @@ export function TripFilters({
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
           aria-label="Filter by status"
-          className="min-h-[40px] rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          className="min-h-[44px] rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
         >
           {STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -135,7 +147,7 @@ export function TripFilters({
               type="button"
               onClick={() => onSearchChange("")}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-0.5 top-1/2 inline-flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-gray-400 hover:text-gray-600"
             >
               <X className="h-3.5 w-3.5" />
             </button>

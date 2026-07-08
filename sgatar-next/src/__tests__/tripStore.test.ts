@@ -87,6 +87,7 @@ describe("tripStore", () => {
         actualDepartureTime: null,
         actualArrivalTime: null,
         operationalNote: null,
+        delegateNotice: null,
         isSos: false,
         sosMessage: null,
         isAdhoc: true,

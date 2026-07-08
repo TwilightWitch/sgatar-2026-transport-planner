@@ -40,6 +40,7 @@ export interface TripWithRoute {
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   operationalNote: string | null;
+  delegateNotice: string | null;
   isSos: boolean;
   sosMessage: string | null;
   isAdhoc: boolean;
@@ -69,6 +70,8 @@ export interface HeadcountUpdate {
   status?: TripWithRoute["status"];
   isSos?: boolean;
   sosMessage?: string | null;
+  operationalNote?: string | null;
+  delegateNotice?: string | null;
   loName?: string | null;
   loPhone?: string | null;
 }
@@ -115,20 +118,60 @@ interface OfflineQueueEntry {
 const TRIPS_QUERY_KEY = ["activeTrips"] as const;
 const ROUTES_QUERY_KEY = ["masterRoutes"] as const;
 const OFFLINE_QUEUE_KEY = "sgatar_offline_queue";
+const FINISHED_VISIBILITY_WINDOW_MINUTES = 90;
+
+const ACTIVE_OPERATIONAL_STATUSES: ReadonlySet<TripWithRoute["status"]> =
+  new Set(["boarding", "departed_origin", "en_route", "delayed"]);
+
+const FINISHED_STATUSES: ReadonlySet<TripWithRoute["status"]> = new Set([
+  "arrived_destination",
+  "completed",
+]);
+
+function parseHmToMinutes(hm: string): number {
+  const timeParts = hm.split(":");
+  if (timeParts.length < 2) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const hours = Number.parseInt(timeParts[0], 10);
+  const minutes = Number.parseInt(timeParts[1], 10);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function getLiveSortGroup(trip: TripWithRoute): number {
+  if (trip.isSos) return 1;
+  if (ACTIVE_OPERATIONAL_STATUSES.has(trip.status)) return 2;
+  if (trip.status === "scheduled") return 3;
+  if (FINISHED_STATUSES.has(trip.status)) return 4;
+  return 5;
+}
 
 /**
- * Deterministically sorts trips by departure then bus identifier.
+ * Produces a single live-ops ordering used across LO, delegate, and FIDS views.
  *
- * Applying this ordering in React Query's `select` ensures all subscribers see
- * a stable order after polling and optimistic writes, preventing UI flicker.
+ * Why this order exists:
+ * 1. SOS trips always stay at the very top so incidents are never buried.
+ * 2. Active operations (boarding/departed/en-route/delayed) come next.
+ * 3. Scheduled upcoming trips follow in chronological order.
+ * 4. Finished trips are intentionally pushed to the bottom to reduce noise
+ *    without deleting still-relevant records.
  */
 export function sortTripsDeterministically(
   trips: readonly TripWithRoute[],
 ): TripWithRoute[] {
   return [...trips].sort((left, right) => {
-    const byDeparture = left.scheduledDeparture.localeCompare(
-      right.scheduledDeparture,
-    );
+    const byGroup = getLiveSortGroup(left) - getLiveSortGroup(right);
+    if (byGroup !== 0) return byGroup;
+
+    const byDeparture =
+      parseHmToMinutes(left.scheduledDeparture) -
+      parseHmToMinutes(right.scheduledDeparture);
     if (byDeparture !== 0) return byDeparture;
 
     const byBus = left.busIdentifier.localeCompare(right.busIdentifier);
@@ -136,6 +179,26 @@ export function sortTripsDeterministically(
 
     return left.id.localeCompare(right.id);
   });
+}
+
+/**
+ * Keeps recently finished trips briefly visible on FIDS so users can confirm
+ * arrivals, while hiding stale finished rows that crowd active operations.
+ */
+export function shouldHideTripFromLiveDisplay(
+  trip: TripWithRoute,
+  now: Date = new Date(),
+  thresholdMinutes: number = FINISHED_VISIBILITY_WINDOW_MINUTES,
+): boolean {
+  if (!FINISHED_STATUSES.has(trip.status)) return false;
+
+  const scheduledMinutes = parseHmToMinutes(trip.scheduledArrival);
+  if (!Number.isFinite(scheduledMinutes)) {
+    return false;
+  }
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return nowMinutes - scheduledMinutes > thresholdMinutes;
 }
 
 async function fetchTrips(): Promise<TripWithRoute[]> {
@@ -301,6 +364,12 @@ export function useUpdateHeadcount() {
                 ...(update.isSos !== undefined && { isSos: update.isSos }),
                 ...(update.sosMessage !== undefined && {
                   sosMessage: update.sosMessage,
+                }),
+                ...(update.operationalNote !== undefined && {
+                  operationalNote: update.operationalNote,
+                }),
+                ...(update.delegateNotice !== undefined && {
+                  delegateNotice: update.delegateNotice,
                 }),
                 ...(update.loName !== undefined && { loName: update.loName }),
                 ...(update.loPhone !== undefined && {

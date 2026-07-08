@@ -1023,6 +1023,7 @@ export function getStaticTrips(): TripWithRoute[] {
     actualDepartureTime: null,
     actualArrivalTime: null,
     operationalNote: row.note || null,
+    delegateNotice: null,
     isSos: false,
     sosMessage: null,
     isAdhoc: false,

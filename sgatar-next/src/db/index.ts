@@ -28,9 +28,7 @@ function createDb(): AppDb {
 }
 
 export function getDb(): AppDb {
-	if (!dbInstance) {
-		dbInstance = createDb();
-	}
+	dbInstance ??= createDb();
 	return dbInstance;
 }
 

@@ -65,6 +65,14 @@ function buildPatch(row: Record<string, string>): Partial<TripWithRoute> {
     patch.scheduledArrival = col(row, "scheduledarrival", "arv");
   if (col(row, "operationalnote", "note"))
     patch.operationalNote = col(row, "operationalnote", "note");
+  if (col(row, "delegatenotice", "broadcast", "publicnotice")) {
+    patch.delegateNotice = col(
+      row,
+      "delegatenotice",
+      "broadcast",
+      "publicnotice",
+    );
+  }
   if (row.pax) patch.currentPax = Number(row.pax);
   return patch;
 }
@@ -85,6 +93,8 @@ function buildNewTrip(
     actualDepartureTime: null,
     actualArrivalTime: null,
     operationalNote: col(row, "operationalnote", "note") || null,
+    delegateNotice:
+      col(row, "delegatenotice", "broadcast", "publicnotice") || null,
     isSos: false,
     sosMessage: null,
     isAdhoc: false,

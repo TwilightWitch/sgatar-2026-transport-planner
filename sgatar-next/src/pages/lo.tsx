@@ -13,14 +13,13 @@ import { useState } from "react";
 
 /**
  * Applies the status dropdown filter to a list of trips.
- * `"active"` excludes completed; the others match the exact DB status string.
+ * `"all"` keeps the full list; all other values match exact DB statuses.
  */
 function applyStatusFilter(
   trips: TripWithRoute[],
   filter: StatusFilter,
 ): TripWithRoute[] {
   if (filter === "all") return trips;
-  if (filter === "active") return trips.filter((t) => t.status !== "completed");
   return trips.filter((t) => t.status === filter);
 }
 
@@ -64,7 +63,7 @@ export default function LoPage() {
   const { t } = useI18n();
 
   const [filterDay, setFilterDay] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Build derived data — all filtering is stateless transforms on the cache
@@ -147,15 +146,18 @@ export default function LoPage() {
           </div>
         )}
 
-        {Object.entries(grouped).map(([conferenceDay, services]) => {
+        {Object.entries(grouped).map(([conferenceDay, services], dayIndex) => {
           const totalBuses = Object.values(services).reduce(
             (count, dayTrips) => count + dayTrips.length,
             0,
           );
+          const isDefaultOpenDay =
+            filterDay === "all" ? dayIndex === 0 : conferenceDay === filterDay;
 
           return (
             <details
               key={conferenceDay}
+              open={isDefaultOpenDay}
               className="group rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
             >
               <summary className="flex min-h-[44px] cursor-pointer items-center justify-between p-4 text-sm font-semibold text-slate-700 dark:text-gray-200">

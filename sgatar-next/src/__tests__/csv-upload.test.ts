@@ -67,6 +67,7 @@ describe("upload route integration (via tripStore)", () => {
       actualDepartureTime: null,
       actualArrivalTime: null,
       operationalNote: "from CSV",
+      delegateNotice: null,
       isSos: false,
       sosMessage: null,
       isAdhoc: false,

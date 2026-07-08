@@ -36,7 +36,8 @@ export function DepartureTimeline({ trips }: Readonly<DepartureTimelineProps>) {
     .slice(0, 10);
 
   const statusStyles: Record<string, string> = {
-    scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    scheduled:
+      "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
     boarding:
       "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     delayed:
@@ -44,7 +45,7 @@ export function DepartureTimeline({ trips }: Readonly<DepartureTimelineProps>) {
     en_route:
       "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
     departed_origin:
-      "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
     arrived_destination:
       "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
     completed: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",

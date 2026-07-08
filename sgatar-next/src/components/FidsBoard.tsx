@@ -5,7 +5,10 @@
  */
 "use client";
 
-import { useDayFilteredFleet } from "@/hooks/useLiveFleet";
+import {
+  shouldHideTripFromLiveDisplay,
+  useDayFilteredFleet,
+} from "@/hooks/useLiveFleet";
 import { useMemo, useState } from "react";
 
 /**
@@ -21,11 +24,7 @@ export function FidsBoard() {
 
   const activeTrips = useMemo(
     () =>
-      (dayTrips ?? [])
-        .filter((trip) => trip.status !== "completed")
-        .sort((left, right) =>
-          left.scheduledDeparture.localeCompare(right.scheduledDeparture),
-        ),
+      (dayTrips ?? []).filter((trip) => !shouldHideTripFromLiveDisplay(trip)),
     [dayTrips],
   );
 
